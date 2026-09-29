@@ -54,23 +54,6 @@ var SUPABASE_ANON_KEY='sb_publishable_BOgAPc5LgP5-knHVjoEhFA_jOaheyX3';
 var DAYS=['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],KEY='kuliah-planner-v1',tab='dash';
 var S={courses:[],schedule:[],att:[],tasks:[]};
 try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
-var SEED=[
-['Agama Islam','Drs. Moh. In Am, M.Pd.I',2,0+1,'08:00','09:30'],
-['Pancasila','Arya Maulana Pandhu Pradhana',2,3,'12:05','13:40'],
-['Bahasa Indonesia','Dr. Elvi Wahyudi, M.M',2,2,'12:50','13:00'],
-['English for Academic Purposed','Tim Bahasa Inggris LC',2,0,'07:00','07:50'],
-['Pengenalan Pemrograman','Deni Sutaji, S.Kom., M.Kom',3,2,'08:41','11:10'],
-['Kalkulus','Nadya Husenti, S.Pd., M.Pd',3,1,'09:40','12:50'],
-['Organisasi dan Arsitektur Komputer','Putri Aisyiyah Rakhma Devi, S.Pd., M.Kom',3,3,'08:41','11:10'],
-['Etika Profesi','Umi Chotijah, S.Kom., M.Kom',3,0,'09:30','12:00']];
-function seed(){
-  if(S.seeded)return;
-  SEED.forEach(function(r,i){
-    S.courses.push({id:'seed-c'+i,name:r[0],lec:r[1],sks:String(r[2])});
-    S.schedule.push({id:'seed-s'+i,cid:'seed-c'+i,day:r[3],s:r[4],e:r[5],room:''});
-  });
-  S.seeded=true;save();
-}
 var supabaseClient=null,account=null,storageKey=KEY,tm=null,authBusy=false,authSignup=false,legacyImportPending=false;
 function push(){if(!supabaseClient||!account)return;clearTimeout(tm);tm=setTimeout(function(){tm=null;supabaseClient.from('planner_state').upsert({user_id:account.id,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()},{onConflict:'user_id'}).then(function(result){if(result.error)throw result.error;if(legacyImportPending){try{localStorage.setItem('kuliah-planner-legacy-imported','1')}catch(e){}legacyImportPending=false}badge('☁️ Tersinkron')}).catch(function(){badge('⚠️ Gagal sync (tersimpan lokal)')})},400)}
 function save(){S.rev=Date.now();try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}push()}
@@ -105,7 +88,7 @@ function useSession(session){
     if(result.data&&result.data.data){var remote=Object.assign({courses:[],schedule:[],att:[],tasks:[]},result.data.data);if((+remote.rev||0)>(+S.rev||0))S=remote;else if((+S.rev||0)>(+remote.rev||0))pushLocal=true;}
     try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}
     document.getElementById('accountBtn').style.display='inline';
-    if(!S.seeded)seed();else{render();if(result.data&&!pushLocal)badge('☁️ Tersinkron');if(!result.data||pushLocal)push()}
+    render();if(result.data&&!pushLocal)badge('☁️ Tersinkron');if(!result.data||pushLocal)push();
   }).catch(function(error){document.getElementById('accountBtn').style.display='inline';badge('⚠️ DB unavailable');render();console.error(error)});
 }
 function startApp(){
@@ -116,7 +99,7 @@ function startApp(){
     supabaseClient.auth.getSession().then(function(result){if(result.error)throw result.error;useSession(result.data.session)}).catch(function(){renderAuth('Could not connect to Supabase.')});
     badge('🔒 Sign in required');renderAuth();return;
   }
-  badge('📱 Lokal · Supabase not configured');seed();render();
+  badge('📱 Lokal · Supabase not configured');render();
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
