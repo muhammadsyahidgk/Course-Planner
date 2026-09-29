@@ -1,375 +1,197 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Jadwal &amp; Tugas</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Course Planner</title>
 <style>
-  :root{
-    --paper:#f5f7fa; --ink:#14213d; --ink-soft:#3d4a68;
-    --line:#d7deea; --amber:#fca311; --teal:#2a9d8f;
-    --card:#ffffff; --danger:#c1443c;
-    box-sizing:border-box;
-    padding-top:env(safe-area-inset-top,0px);
-    padding-bottom:env(safe-area-inset-bottom,0px);
-  }
-  :root:not([data-theme="light"]) {
-    @media (prefers-color-scheme: dark){
-      --paper:#12151f; --ink:#eef1f8; --ink-soft:#aab4cc;
-      --line:#2a3247; --card:#1a1f2e;
-    }
-  }
-  :root[data-theme="dark"]{
-    --paper:#12151f; --ink:#eef1f8; --ink-soft:#aab4cc;
-    --line:#2a3247; --card:#1a1f2e;
-  }
-  *{box-sizing:border-box;}
-  html{scroll-padding-top:env(safe-area-inset-top,0px);}
-  body{
-    margin:0; background:var(--paper); color:var(--ink);
-    font-family:'Inter',system-ui,sans-serif;
-    min-height:100%;
-    -webkit-font-smoothing:antialiased;
-  }
-  header{
-    padding:28px 20px 18px; border-bottom:1px solid var(--line);
-    padding-top:calc(28px + env(safe-area-inset-top,0px));
-  }
-  h1{
-    font-family:'Fraunces',serif; font-weight:600; font-size:28px;
-    margin:0 0 4px; letter-spacing:-0.01em;
-  }
-  header p{margin:0; color:var(--ink-soft); font-size:14px;}
-
-  nav.tabs{
-    display:flex; gap:4px; padding:14px 20px 0; border-bottom:1px solid var(--line);
-    background:var(--paper); overflow-x:auto;
-  }
-  nav.tabs button{
-    font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
-    background:none; border:none; color:var(--ink-soft);
-    padding:10px 4px 12px; margin-right:22px; cursor:pointer;
-    border-bottom:2px solid transparent; white-space:nowrap;
-  }
-  nav.tabs button.active{color:var(--ink); border-bottom-color:var(--amber);}
-
-  main{max-width:760px; margin:0 auto; padding:20px 20px 60px;}
-  .panel{display:none;}
-  .panel.active{display:block;}
-
-  /* ---- Jadwal ---- */
-  .day-row{
-    display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px;
-  }
-  .day-row button{
-    flex:0 0 auto; border:1px solid var(--line); background:var(--card);
-    color:var(--ink-soft); font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
-    padding:8px 14px; border-radius:999px; cursor:pointer;
-  }
-  .day-row button.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
-
-  .slot{
-    display:flex; align-items:center; gap:14px;
-    background:var(--card); border:1px solid var(--line); border-left:4px solid var(--teal);
-    border-radius:8px; padding:14px 16px; margin-bottom:10px;
-  }
-  .slot .time{font-family:'Fraunces',serif; font-weight:600; font-size:15px; width:96px; flex:0 0 auto; color:var(--ink);}
-  .slot .subj{font-weight:600; font-size:15px;}
-  .slot .room{color:var(--ink-soft); font-size:13px; margin-top:2px;}
-  .slot .body{flex:1;}
-  .slot .del{
-    background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:18px;
-    padding:4px 6px; line-height:1;
-  }
-  .slot .del:hover{color:var(--danger);}
-  .empty{color:var(--ink-soft); font-size:14px; padding:24px 0; text-align:center;}
-
-  form.add{
-    background:var(--card); border:1px solid var(--line); border-radius:10px;
-    padding:16px; margin-top:18px;
-  }
-  form.add .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  form.add .full{grid-column:1/-1;}
-  label{display:block; font-size:12px; color:var(--ink-soft); margin-bottom:4px; font-weight:600;}
-  input, select{
-    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
-    background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; font-size:14px;
-  }
-  input:focus, select:focus{outline:2px solid var(--amber); outline-offset:1px;}
-  .add-btn{
-    margin-top:12px; width:100%; padding:11px; border:none; border-radius:6px;
-    background:var(--ink); color:var(--paper); font-weight:700; font-size:14px; cursor:pointer;
-  }
-  .add-btn:hover{background:var(--teal);}
-
-  /* ---- Tugas ---- */
-  .task-filters{display:flex; gap:8px; margin-bottom:14px;}
-  .task-filters button{
-    border:1px solid var(--line); background:var(--card); color:var(--ink-soft);
-    font-size:13px; font-weight:600; padding:7px 13px; border-radius:999px; cursor:pointer;
-  }
-  .task-filters button.active{background:var(--amber); color:#1a1200; border-color:var(--amber);}
-
-  .task{
-    display:flex; align-items:flex-start; gap:12px;
-    background:var(--card); border:1px solid var(--line); border-radius:8px;
-    padding:14px 16px; margin-bottom:10px;
-  }
-  .task.done{opacity:0.55;}
-  .task input[type=checkbox]{
-    width:20px; height:20px; margin-top:1px; accent-color:var(--teal); flex:0 0 auto; cursor:pointer;
-  }
-  .task .body{flex:1;}
-  .task .title{font-weight:600; font-size:15px;}
-  .task.done .title{text-decoration:line-through;}
-  .task .meta{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
-  .task .meta.overdue{color:var(--danger); font-weight:600;}
-  .task .del{background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:18px; padding:2px 4px;}
-  .task .del:hover{color:var(--danger);}
-
-  @media (max-width:480px){
-    form.add .grid{grid-template-columns:1fr;}
-    .slot .time{width:72px; font-size:14px;}
-  }
+:root{--bg:#f5f6fa;--card:#fff;--tx:#1c2333;--mu:#6b7385;--pr:#4361ee;--bd:#e3e6ee;--ok:#1f9d6b;--bad:#d64545;--warn:#d98a1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12141c;--card:#1c2030;--tx:#e8ebf5;--mu:#98a0b8;--pr:#7b93ff;--bd:#2c3248;--ok:#41c894;--bad:#ff7070;--warn:#f0b04a}}
+:root[data-theme="dark"]{--bg:#12141c;--card:#1c2030;--tx:#e8ebf5;--mu:#98a0b8;--pr:#7b93ff;--bd:#2c3248;--ok:#41c894;--bad:#ff7070;--warn:#f0b04a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:8px 0 2px}.sub{color:var(--mu);margin:0 0 14px}
+nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}
+nav button{flex:none;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 14px;border-radius:20px;cursor:pointer;font:inherit}
+nav button.on{background:var(--pr);color:#fff;border-color:var(--pr)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:16px;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+input,select{flex:1 1 140px;min-width:0;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.btn{background:var(--pr);color:#fff;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font:inherit}
+.x{background:none;border:0;color:var(--bad);cursor:pointer;font-size:16px;padding:4px 8px}
+.item{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--bd)}
+.item:first-of-type{border-top:0}
+.grow{flex:1;min-width:0}.mu{color:var(--mu);font-size:13px}
+.tag{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid var(--bd)}
+.Hadir{color:var(--ok)}.Izin,.Sakit{color:var(--warn)}.Alpha{color:var(--bad)}
+.bar{height:6px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--ok)}
+.done .t{text-decoration:line-through;color:var(--mu)}
+.late{color:var(--bad)}.empty{color:var(--mu);padding:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.grid .card{margin:0}
+.auth{max-width:420px;margin:32px auto}
+.auth p{color:var(--mu)}
+.auth label{display:block;margin:10px 0 4px}
+.auth input{width:100%}
+.auth-error{color:var(--bad)!important;min-height:1.5em}
+#accountBtn{display:none;border:0;background:none;color:var(--pr);cursor:pointer;font:inherit;padding:0 0 0 8px}
 </style>
 </head>
 <body>
-
-<header>
-  <h1>Jadwal &amp; Tugas</h1>
-  <p>Atur jam pelajaran dan pantau tugas dalam satu tempat.</p>
-</header>
-
-<nav class="tabs">
-  <button data-tab="jadwal" class="active">Jadwal</button>
-  <button data-tab="tugas">Tugas</button>
-</nav>
-
-<main>
-
-  <!-- ===== JADWAL ===== -->
-  <section id="jadwal" class="panel active">
-    <div class="day-row" id="dayRow"></div>
-    <div id="slotList"></div>
-
-    <form class="add" id="formJadwal">
-      <div class="grid">
-        <div>
-          <label for="j-mulai">Jam mulai</label>
-          <input type="time" id="j-mulai" required>
-        </div>
-        <div>
-          <label for="j-selesai">Jam selesai</label>
-          <input type="time" id="j-selesai" required>
-        </div>
-        <div class="full">
-          <label for="j-mapel">Mata pelajaran</label>
-          <input type="text" id="j-mapel" placeholder="mis. Matematika" required>
-        </div>
-        <div class="full">
-          <label for="j-ruang">Ruang / catatan (opsional)</label>
-          <input type="text" id="j-ruang" placeholder="mis. Ruang 3A">
-        </div>
-      </div>
-      <button type="submit" class="add-btn">Tambah ke jadwal</button>
-    </form>
-  </section>
-
-  <!-- ===== TUGAS ===== -->
-  <section id="tugas" class="panel">
-    <div class="task-filters" id="taskFilters">
-      <button data-filter="semua" class="active">Semua</button>
-      <button data-filter="belum">Belum selesai</button>
-      <button data-filter="selesai">Selesai</button>
-    </div>
-    <div id="taskList"></div>
-
-    <form class="add" id="formTugas">
-      <div class="grid">
-        <div class="full">
-          <label for="t-judul">Nama tugas</label>
-          <input type="text" id="t-judul" placeholder="mis. Esai Bahasa Indonesia" required>
-        </div>
-        <div>
-          <label for="t-mapel">Mata pelajaran</label>
-          <input type="text" id="t-mapel" placeholder="mis. Fisika">
-        </div>
-        <div>
-          <label for="t-tenggat">Tenggat</label>
-          <input type="date" id="t-tenggat">
-        </div>
-      </div>
-      <button type="submit" class="add-btn">Tambah tugas</button>
-    </form>
-  </section>
-
-</main>
-
+<div class="wrap">
+<h1>🎓 Course Planner</h1>
+<p class="sub"><span id="today"></span> · <span id="sync">📱 Lokal</span><button id="accountBtn" onclick="signOut()">· Keluar</button></p>
+<nav id="nav"></nav>
+<div id="view"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const DAYS = ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"];
-let state = { schedule: [], tasks: [] };
-let activeDay = new Date().getDay(); // 0=Sun
-activeDay = activeDay === 0 ? 6 : activeDay - 1; // map to 0=Senin..6=Minggu
-let taskFilter = "semua";
-
-function load(){
-  try{
-    const raw = localStorage.getItem('jadwal-tugas-data');
-    if(raw) state = JSON.parse(raw);
-  }catch(e){ console.error('Gagal memuat data', e); }
-  if(!state.schedule) state.schedule = [];
-  if(!state.tasks) state.tasks = [];
-}
-function save(){
-  try{ localStorage.setItem('jadwal-tugas-data', JSON.stringify(state)); }
-  catch(e){ console.error('Gagal menyimpan data', e); }
-}
-
-// ---- Tabs ----
-document.querySelectorAll('nav.tabs button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-    document.getElementById(btn.dataset.tab).classList.add('active');
+var SUPABASE_URL='https://YOUR_PROJECT_ID.supabase.co';
+var SUPABASE_ANON_KEY='YOUR_SUPABASE_ANON_KEY';
+var DAYS=['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],KEY='kuliah-planner-v1',tab='dash';
+var S={courses:[],schedule:[],att:[],tasks:[]};
+try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
+var SEED=[
+['Agama Islam','Drs. Moh. In Am, M.Pd.I',2,0+1,'08:00','09:30'],
+['Pancasila','Arya Maulana Pandhu Pradhana',2,3,'12:05','13:40'],
+['Bahasa Indonesia','Dr. Elvi Wahyudi, M.M',2,2,'12:50','13:00'],
+['English for Academic Purposed','Tim Bahasa Inggris LC',2,0,'07:00','07:50'],
+['Pengenalan Pemrograman','Deni Sutaji, S.Kom., M.Kom',3,2,'08:41','11:10'],
+['Kalkulus','Nadya Husenti, S.Pd., M.Pd',3,1,'09:40','12:50'],
+['Organisasi dan Arsitektur Komputer','Putri Aisyiyah Rakhma Devi, S.Pd., M.Kom',3,3,'08:41','11:10'],
+['Etika Profesi','Umi Chotijah, S.Kom., M.Kom',3,0,'09:30','12:00']];
+function seed(){
+  if(S.seeded)return;
+  SEED.forEach(function(r,i){
+    S.courses.push({id:'seed-c'+i,name:r[0],lec:r[1],sks:String(r[2])});
+    S.schedule.push({id:'seed-s'+i,cid:'seed-c'+i,day:r[3],s:r[4],e:r[5],room:''});
   });
-});
-
-// ---- Jadwal ----
-function renderDayRow(){
-  const row = document.getElementById('dayRow');
-  row.innerHTML = '';
-  DAYS.forEach((d,i)=>{
-    const b = document.createElement('button');
-    b.textContent = d;
-    if(i===activeDay) b.classList.add('active');
-    b.addEventListener('click', ()=>{ activeDay=i; renderDayRow(); renderSlots(); });
-    row.appendChild(b);
-  });
+  S.seeded=true;save();
 }
-function renderSlots(){
-  const list = document.getElementById('slotList');
-  list.innerHTML = '';
-  const items = state.schedule
-    .filter(s=>s.day===activeDay)
-    .sort((a,b)=> a.start.localeCompare(b.start));
-  if(items.length===0){
-    list.innerHTML = '<div class="empty">Belum ada jadwal untuk hari ini.</div>';
-    return;
+var supabaseClient=null,account=null,storageKey=KEY,tm=null,authBusy=false,authSignup=false,legacyImportPending=false;
+function push(){if(!supabaseClient||!account)return;clearTimeout(tm);tm=setTimeout(function(){tm=null;supabaseClient.from('planner_state').upsert({user_id:account.id,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()},{onConflict:'user_id'}).then(function(result){if(result.error)throw result.error;if(legacyImportPending){try{localStorage.setItem('kuliah-planner-legacy-imported','1')}catch(e){}legacyImportPending=false}badge('☁️ Tersinkron')}).catch(function(){badge('⚠️ Gagal sync (tersimpan lokal)')})},400)}
+function save(){S.rev=Date.now();try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}push()}
+function badge(t){var e=document.getElementById('sync');if(e)e.textContent=t}
+function renderAuth(message){
+  document.getElementById('nav').innerHTML='';
+  document.getElementById('accountBtn').style.display='none';
+  document.getElementById('view').innerHTML='<div class="card auth"><h2>'+(authSignup?'Create account':'Sign in')+'</h2><p>Use the same account on each device to access your planner.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="'+(authSignup?'new-password':'current-password')+'" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':authSignup?'Create account':'Sign in')+'</button></form><p><button class="x" style="color:var(--pr)" onclick="authSignup=!authSignup;renderAuth()">'+(authSignup?'Already have an account? Sign in':'New here? Create an account')+'</button></p></div>';
+}
+function submitAuth(event){
+  event.preventDefault();if(!supabaseClient)return;
+  var email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
+  authBusy=true;renderAuth();
+  var action=authSignup?supabaseClient.auth.signUp({email:email,password:password}):supabaseClient.auth.signInWithPassword({email:email,password:password});
+  action.then(function(result){if(result.error)throw result.error;authBusy=false;if(authSignup&&!result.data.session)renderAuth('Check your email to confirm your account.');}).catch(function(error){authBusy=false;renderAuth(error.message||'Unable to sign in.')});
+}
+function signOut(){if(supabaseClient)supabaseClient.auth.signOut()}
+function useSession(session){
+  var next=session&&session.user;
+  if(!next){account=null;storageKey=KEY;badge('🔒 Sign in required');renderAuth();return}
+  if(account&&account.id===next.id)return;
+  account=next;storageKey=KEY+'-user-'+account.id;
+  var local=null,legacy=null;
+  try{local=JSON.parse(localStorage.getItem(storageKey)||'null');if(!local&&!localStorage.getItem('kuliah-planner-legacy-imported'))legacy=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+  legacyImportPending=!!legacy;
+  S=Object.assign({courses:[],schedule:[],att:[],tasks:[]},local||legacy||{});
+  badge('☁️ Loading...');
+  supabaseClient.from('planner_state').select('data').eq('user_id',account.id).maybeSingle().then(function(result){
+    if(!account||account.id!==next.id)return;
+    if(result.error)throw result.error;
+    var pushLocal=false;
+    if(result.data&&result.data.data){var remote=Object.assign({courses:[],schedule:[],att:[],tasks:[]},result.data.data);if((+remote.rev||0)>(+S.rev||0))S=remote;else if((+S.rev||0)>(+remote.rev||0))pushLocal=true;}
+    try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}
+    document.getElementById('accountBtn').style.display='inline';
+    if(!S.seeded)seed();else{render();if(result.data&&!pushLocal)badge('☁️ Tersinkron');if(!result.data||pushLocal)push()}
+  }).catch(function(error){document.getElementById('accountBtn').style.display='inline';badge('⚠️ DB unavailable');render();console.error(error)});
+}
+function startApp(){
+  var configured=SUPABASE_URL.indexOf('YOUR_')<0&&SUPABASE_ANON_KEY.indexOf('YOUR_')<0;
+  if(configured&&window.supabase&&window.supabase.createClient){
+    supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+    supabaseClient.auth.onAuthStateChange(function(event,session){setTimeout(function(){useSession(session)},0)});
+    supabaseClient.auth.getSession().then(function(result){if(result.error)throw result.error;useSession(result.data.session)}).catch(function(){renderAuth('Could not connect to Supabase.')});
+    badge('🔒 Sign in required');renderAuth();return;
   }
-  items.forEach(s=>{
-    const el = document.createElement('div');
-    el.className='slot';
-    el.innerHTML = `
-      <div class="time">${s.start}–${s.end}</div>
-      <div class="body">
-        <div class="subj">${escapeHtml(s.subject)}</div>
-        ${s.room ? `<div class="room">${escapeHtml(s.room)}</div>` : ''}
-      </div>
-      <button class="del" aria-label="Hapus">✕</button>
-    `;
-    el.querySelector('.del').addEventListener('click', ()=>{
-      state.schedule = state.schedule.filter(x=>x.id!==s.id);
-      save(); renderSlots();
-    });
-    list.appendChild(el);
-  });
+  badge('📱 Lokal · Supabase not configured');seed();render();
 }
-document.getElementById('formJadwal').addEventListener('submit', e=>{
-  e.preventDefault();
-  const start = document.getElementById('j-mulai').value;
-  const end = document.getElementById('j-selesai').value;
-  const subject = document.getElementById('j-mapel').value.trim();
-  const room = document.getElementById('j-ruang').value.trim();
-  if(!start || !end || !subject) return;
-  state.schedule.push({ id: Date.now()+Math.random(), day: activeDay, start, end, subject, room });
-  save();
-  e.target.reset();
-  renderSlots();
-});
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function v(id){return document.getElementById(id).value.trim()}
+function cn(id){var c=S.courses.find(function(x){return x.id===id});return c?esc(c.name):'(dihapus)'}
+function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
+function fmt(d){return new Date(d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}
+function opts(sel){return S.courses.map(function(c){return '<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')}
+var todayIdx=(new Date().getDay()+6)%7,todayISO=iso(new Date());
+document.getElementById('today').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-// ---- Tugas ----
-document.getElementById('taskFilters').addEventListener('click', e=>{
-  if(e.target.tagName!=='BUTTON') return;
-  document.querySelectorAll('#taskFilters button').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  taskFilter = e.target.dataset.filter;
-  renderTasks();
-});
-function fmtDate(iso){
-  if(!iso) return null;
-  const d = new Date(iso+'T00:00:00');
-  return d.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' });
+var TABS={dash:'Beranda',courses:'Mata Kuliah',schedule:'Jadwal',att:'Absensi',tasks:'Tugas'};
+var ed={k:null,id:null};
+function go(t){tab=t;ed={k:null,id:null};render()}
+function edit(k,id){ed={k:k,id:id};render();window.scrollTo(0,0)}
+function cancel(){ed={k:null,id:null};render()}
+function cur(k){return ed.k===k?S[k].find(function(x){return x.id===ed.id}):null}
+function render(){
+  document.getElementById('nav').innerHTML=Object.keys(TABS).map(function(k){return '<button class="'+(k===tab?'on':'')+'" onclick="go(\''+k+'\')">'+TABS[k]+'</button>'}).join('');
+  document.getElementById('view').innerHTML=VIEWS[tab]();
 }
-function isOverdue(t){
-  if(!t.due || t.done) return false;
-  const today = new Date(); today.setHours(0,0,0,0);
-  return new Date(t.due+'T00:00:00') < today;
-}
-function renderTasks(){
-  const list = document.getElementById('taskList');
-  list.innerHTML = '';
-  let items = state.tasks.slice().sort((a,b)=>{
-    if(!a.due) return 1; if(!b.due) return -1;
-    return a.due.localeCompare(b.due);
-  });
-  if(taskFilter==='belum') items = items.filter(t=>!t.done);
-  if(taskFilter==='selesai') items = items.filter(t=>t.done);
+function needCourse(){return S.courses.length?'':'<div class="card empty">Tambahkan mata kuliah dulu di tab “Mata Kuliah”.</div>'}
+function del(key,id){if(!confirm('Hapus data ini?'))return;S[key]=S[key].filter(function(x){return x.id!==id});if(key==='courses'){['schedule','att','tasks'].forEach(function(k){S[k]=S[k].filter(function(x){return x.cid!==id})})}if(ed.id===id)ed={k:null,id:null};save();render()}
+function pct(cid){var a=S.att.filter(function(x){return x.cid===cid});if(!a.length)return null;return Math.round(a.filter(function(x){return x.st==='Hadir'}).length/a.length*100)}
+function acts(k,id){return '<button class="x" style="color:var(--pr)" title="Edit" onclick="edit(\''+k+'\',\''+id+'\')">✎</button><button class="x" title="Hapus" onclick="del(\''+k+'\',\''+id+'\')">✕</button>'}
+function btns(e,fn,label){return '<button class="btn" onclick="'+fn+'()">'+(e?'Simpan perubahan':label)+'</button>'+(e?' <button class="btn" style="background:var(--mu)" onclick="cancel()">Batal</button>':'')}
+function sched(cid){return S.schedule.find(function(x){return x.cid===cid})}
 
-  if(items.length===0){
-    list.innerHTML = '<div class="empty">Tidak ada tugas di sini.</div>';
-    return;
-  }
-  items.forEach(t=>{
-    const el = document.createElement('div');
-    el.className = 'task' + (t.done ? ' done' : '');
-    const metaParts = [];
-    if(t.subject) metaParts.push(escapeHtml(t.subject));
-    if(t.due) metaParts.push((isOverdue(t) ? 'Terlambat · ' : 'Tenggat ') + fmtDate(t.due));
-    el.innerHTML = `
-      <input type="checkbox" ${t.done?'checked':''}>
-      <div class="body">
-        <div class="title">${escapeHtml(t.title)}</div>
-        ${metaParts.length ? `<div class="meta${isOverdue(t)?' overdue':''}">${metaParts.join(' · ')}</div>` : ''}
-      </div>
-      <button class="del" aria-label="Hapus">✕</button>
-    `;
-    el.querySelector('input[type=checkbox]').addEventListener('change', ev=>{
-      t.done = ev.target.checked; save(); renderTasks();
-    });
-    el.querySelector('.del').addEventListener('click', ()=>{
-      state.tasks = state.tasks.filter(x=>x.id!==t.id);
-      save(); renderTasks();
-    });
-    list.appendChild(el);
-  });
-}
-document.getElementById('formTugas').addEventListener('submit', e=>{
-  e.preventDefault();
-  const title = document.getElementById('t-judul').value.trim();
-  const subject = document.getElementById('t-mapel').value.trim();
-  const due = document.getElementById('t-tenggat').value;
-  if(!title) return;
-  state.tasks.push({ id: Date.now()+Math.random(), title, subject, due, done:false });
-  save();
-  e.target.reset();
-  renderTasks();
-});
+var VIEWS={
+dash:function(){
+  var ts=S.schedule.filter(function(x){return x.day===todayIdx}).sort(function(a,b){return a.s.localeCompare(b.s)});
+  var tk=S.tasks.filter(function(x){return !x.done}).sort(function(a,b){return a.due.localeCompare(b.due)}).slice(0,5);
+  return '<div class="grid"><div class="card"><h2>Kuliah hari ini</h2>'+(ts.length?ts.map(function(x){return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b><div class="mu">'+x.s+'–'+x.e+(x.room?' · '+esc(x.room):'')+'</div></div></div>'}).join(''):'<div class="empty">Tidak ada jadwal hari ini.</div>')+'</div>'+
+  '<div class="card"><h2>Tugas terdekat</h2>'+(tk.length?tk.map(function(x){return '<div class="item"><div class="grow"><b>'+esc(x.title)+'</b><div class="mu">'+cn(x.cid)+'</div></div><span class="'+(x.due<todayISO?'late':'mu')+'">'+fmt(x.due)+'</span></div>'}).join(''):'<div class="empty">Tidak ada tugas tertunda 🎉</div>')+'</div>'+
+  '<div class="card"><h2>Kehadiran</h2>'+(S.courses.length?S.courses.map(function(c){var p=pct(c.id);return '<div style="margin-bottom:8px"><div class="mu">'+esc(c.name)+' — '+(p===null?'belum ada data':p+'%')+'</div><div class="bar"><i style="width:'+(p||0)+'%"></i></div></div>'}).join(''):'<div class="empty">Belum ada mata kuliah.</div>')+'</div></div>';
+},
+courses:function(){
+  var e=cur('courses'),sc=e?sched(e.id):null;
+  var f='<div class="card"><h2>'+(e?'Edit mata kuliah':'Tambah mata kuliah')+'</h2><div class="row"><input id="cName" placeholder="Nama mata kuliah" value="'+(e?esc(e.name):'')+'"><input id="cLec" placeholder="Dosen" value="'+(e?esc(e.lec||''):'')+'"><input id="cSks" type="number" min="1" max="6" placeholder="SKS" value="'+(e?esc(e.sks||''):'')+'"></div>'+
+  '<div class="row"><select id="cDay"><option value="">— tanpa jadwal —</option>'+DAYS.map(function(d,i){return '<option value="'+i+'"'+(sc&&sc.day===i?' selected':'')+'>'+d+'</option>'}).join('')+'</select><input id="cS" type="time" value="'+(sc?sc.s:'08:00')+'"><input id="cE" type="time" value="'+(sc?sc.e:'09:40')+'"><input id="cR" placeholder="Ruang" value="'+(sc?esc(sc.room||''):'')+'"></div>'+btns(e,'saveCourse','Tambah')+'</div>';
+  return f+'<div class="card"><h2>Daftar ('+S.courses.length+' MK, '+S.courses.reduce(function(a,c){return a+(+c.sks||0)},0)+' SKS)</h2>'+(S.courses.length?S.courses.map(function(c){var s2=sched(c.id);return '<div class="item"><div class="grow"><b>'+esc(c.name)+'</b><div class="mu">'+esc(c.lec||'-')+' · '+(c.sks||'-')+' SKS</div><div class="mu">'+(s2?DAYS[s2.day]+', '+s2.s+'–'+s2.e+(s2.room?' · '+esc(s2.room):''):'Belum ada jadwal')+'</div></div>'+acts('courses',c.id)+'</div>'}).join(''):'<div class="empty">Belum ada mata kuliah.</div>')+'</div>';
+},
+schedule:function(){
+  if(!S.schedule.length)return '<div class="card empty">Belum ada jadwal. Isi jadwal saat menambah atau mengedit mata kuliah di tab “Mata Kuliah”.</div>';
+  return DAYS.map(function(d,i){var l=S.schedule.filter(function(x){return x.day===i}).sort(function(a,b){return a.s.localeCompare(b.s)});if(!l.length)return '';return '<div class="card"><h2>'+d+(i===todayIdx?' <span class="tag">hari ini</span>':'')+'</h2>'+l.map(function(x){var c=S.courses.find(function(y){return y.id===x.cid});return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b><div class="mu">'+x.s+'–'+x.e+(x.room?' · '+esc(x.room):'')+(c&&c.lec?' · '+esc(c.lec):'')+'</div></div></div>'}).join('')+'</div>'}).join('');
+},
+att:function(){
+  if(!S.courses.length)return needCourse();
+  var e=cur('att');
+  var f='<div class="card"><h2>'+(e?'Edit kehadiran':'Catat kehadiran')+'</h2><div class="row"><select id="aC">'+opts(e&&e.cid)+'</select><input id="aD" type="date" value="'+(e?e.date:todayISO)+'"><select id="aS">'+['Hadir','Izin','Sakit','Alpha'].map(function(t){return '<option'+(e&&e.st===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+btns(e,'addAtt','Simpan')+'</div>';
+  var rec=S.courses.map(function(c){var a=S.att.filter(function(x){return x.cid===c.id}),p=pct(c.id);return '<div style="margin-bottom:10px"><b>'+esc(c.name)+'</b> <span class="mu">— '+a.length+' pertemuan, hadir '+(p===null?'-':p+'%')+'</span><div class="bar"><i style="width:'+(p||0)+'%"></i></div></div>'}).join('');
+  var h=S.att.slice().sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,30).map(function(x){return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b><div class="mu">'+fmt(x.date)+'</div></div><span class="tag '+x.st+'">'+x.st+'</span>'+acts('att',x.id)+'</div>'}).join('')||'<div class="empty">Belum ada catatan.</div>';
+  return f+'<div class="card"><h2>Rekap</h2>'+rec+'</div><div class="card"><h2>Riwayat terbaru</h2>'+h+'</div>';
+},
+tasks:function(){
+  if(!S.courses.length)return needCourse();
+  var e=cur('tasks');
+  var f='<div class="card"><h2>'+(e?'Edit tugas':'Tambah tugas')+'</h2><div class="row"><input id="tT" placeholder="Judul tugas" value="'+(e?esc(e.title):'')+'"><select id="tC">'+opts(e&&e.cid)+'</select><input id="tD" type="date" value="'+(e?e.due:todayISO)+'"></div>'+btns(e,'addTask','Tambah')+'</div>';
+  var l=S.tasks.slice().sort(function(a,b){return (a.done-b.done)||a.due.localeCompare(b.due)});
+  return f+'<div class="card"><h2>Daftar tugas ('+S.tasks.filter(function(x){return !x.done}).length+' belum selesai)</h2>'+(l.length?l.map(function(x){return '<div class="item '+(x.done?'done':'')+'"><input type="checkbox" style="flex:none;width:18px;height:18px" '+(x.done?'checked':'')+' onchange="toggle(\''+x.id+'\')"><div class="grow t"><b class="t">'+esc(x.title)+'</b><div class="mu">'+cn(x.cid)+'</div></div><span class="'+(!x.done&&x.due<todayISO?'late':'mu')+'">'+fmt(x.due)+'</span>'+acts('tasks',x.id)+'</div>'}).join(''):'<div class="empty">Belum ada tugas.</div>')+'</div>';
+}};
 
-function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
+function saveCourse(){
+  var n=v('cName');if(!n)return;
+  var e=cur('courses');
+  if(e){e.name=n;e.lec=v('cLec');e.sks=v('cSks')}
+  else{e={id:uid(),name:n,lec:v('cLec'),sks:v('cSks')};S.courses.push(e)}
+  S.schedule=S.schedule.filter(function(x){return x.cid!==e.id});
+  if(v('cDay')!=='')S.schedule.push({id:uid(),cid:e.id,day:+v('cDay'),s:v('cS')||'08:00',e:v('cE')||'09:40',room:v('cR')});
+  ed={k:null,id:null};save();render();
 }
-
-// ---- init ----
-load();
-renderDayRow();
-renderSlots();
-renderTasks();
+function addAtt(){if(!v('aD'))return;var e=cur('att');if(e){e.cid=v('aC');e.date=v('aD');e.st=v('aS')}else S.att.push({id:uid(),cid:v('aC'),date:v('aD'),st:v('aS')});ed={k:null,id:null};save();render()}
+function addTask(){var t=v('tT');if(!t||!v('tD'))return;var e=cur('tasks');if(e){e.title=t;e.cid=v('tC');e.due=v('tD')}else S.tasks.push({id:uid(),cid:v('tC'),title:t,due:v('tD'),done:false});ed={k:null,id:null};save();render()}
+function toggle(id){var t=S.tasks.find(function(x){return x.id===id});t.done=!t.done;save();render()}
+startApp();
 </script>
 </body>
 </html>
