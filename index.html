@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Course Planner</title>
 <style>
-:root{--bg:#f5f6fa;--card:#fff;--tx:#1c2333;--mu:#6b7385;--pr:#4361ee;--bd:#e3e6ee;--ok:#1f9d6b;--bad:#d64545;--warn:#d98a1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12141c;--card:#1c2030;--tx:#e8ebf5;--mu:#98a0b8;--pr:#7b93ff;--bd:#2c3248;--ok:#41c894;--bad:#ff7070;--warn:#f0b04a}}
-:root[data-theme="dark"]{--bg:#12141c;--card:#1c2030;--tx:#e8ebf5;--mu:#98a0b8;--pr:#7b93ff;--bd:#2c3248;--ok:#41c894;--bad:#ff7070;--warn:#f0b04a}
+:root{--bg:#f5f6fa;--card:#fff;--tx:#1c2333;--mu:#6b7385;--pr:#4361ee;--bd:#e3e6ee;--bar-border:var(--bd);--nav-bg:var(--card);--nav-border:var(--bd);--ok:#1f9d6b;--bad:#d64545;--warn:#d98a1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12141c;--card:#1c2030;--tx:#e8ebf5;--mu:#98a0b8;--pr:#7b93ff;--bd:#2c3248;--bar-border:#46516c;--nav-bg:#252b3d;--nav-border:#505c79;--ok:#41c894;--bad:#ff7070;--warn:#f0b04a}}
+:root[data-theme="dark"]{--bg:#12141c;--card:#1c2030;--tx:#e8ebf5;--mu:#98a0b8;--pr:#7b93ff;--bd:#2c3248;--bar-border:#46516c;--nav-bg:#252b3d;--nav-border:#505c79;--ok:#41c894;--bad:#ff7070;--warn:#f0b04a}
 html{scroll-padding-top:env(safe-area-inset-top,0px);scrollbar-gutter:stable;overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--mu) var(--bg)}
 ::-webkit-scrollbar{width:10px;height:8px}
 ::-webkit-scrollbar-track{background:var(--bg)}
@@ -18,7 +18,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-appl
 .wrap{max-width:860px;margin:0 auto;padding:16px}
 h1{font-size:22px;margin:8px 0 2px}.sub{color:var(--mu);margin:0 0 14px}
 nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;scrollbar-width:thin;scrollbar-color:var(--mu) transparent}
-nav button{flex:none;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 14px;border-radius:20px;cursor:pointer;font:inherit}
+nav button{flex:none;border:1px solid var(--nav-border);background:var(--nav-bg);color:var(--tx);padding:8px 14px;border-radius:20px;cursor:pointer;font:inherit}
 nav button.on{background:var(--pr);color:#fff;border-color:var(--pr)}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
 .card h2{font-size:16px;margin:0 0 10px}
@@ -49,16 +49,54 @@ input,select{flex:1 1 140px;min-width:0;padding:9px 10px;border:1px solid var(--
 .auth label{display:block;margin:10px 0 4px}
 .auth input{width:100%}
 .auth-error{color:var(--bad)!important;min-height:1.5em}
-#accountBtn{display:none;border:0;background:none;color:var(--pr);cursor:pointer;font:inherit;padding:0 0 0 8px}
 .btn.secondary{background:var(--bg);color:var(--pr);border:1px solid var(--bd)}
+.topbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:8px 10px;border:1px solid var(--bar-border);border-radius:10px;background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.topbar[hidden]{display:none}
+#topbar nav{flex:1;min-width:0;margin:0;padding:0;scrollbar-width:thin}
+.profile-area{position:relative}
+.profile-area{flex:none}
+.topbar-btn{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--tx);padding:6px 8px;border-radius:6px;cursor:pointer;font:inherit}
+.topbar-btn:hover,.menu-action:hover{background:var(--bg)}
+.avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--pr);color:#fff;font-weight:700}
+.profile-menu{position:absolute;top:calc(100% + 8px);right:0;z-index:10;width:min(300px,calc(100vw - 48px));padding:14px;background:var(--card);border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.16)}
+.profile-name{margin:0;font-weight:700;overflow-wrap:anywhere}.profile-detail{margin:2px 0 12px;color:var(--mu);font-size:13px}
+.theme-label{margin:0 0 6px;color:var(--mu);font-size:13px}
+.theme-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.theme-options button{min-width:0;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);padding:7px 4px;cursor:pointer;font:inherit;font-size:13px}
+.theme-options button[aria-pressed="true"]{border-color:var(--pr);color:var(--pr);box-shadow:inset 0 0 0 1px var(--pr)}
+.profile-actions{display:grid;gap:2px;margin-top:12px;padding-top:8px;border-top:1px solid var(--bd)}
+.menu-action{width:100%;display:flex;align-items:center;gap:10px;border:0;border-radius:6px;background:transparent;color:var(--tx);padding:9px 8px;text-align:left;cursor:pointer;font:inherit}
+.settings-section{padding:12px 0;border-top:1px solid var(--bd)}.settings-section:first-of-type{border-top:0;padding-top:0}
+.settings-section h3{font-size:14px;margin:0 0 8px}.settings-section p{margin:0;color:var(--mu);font-size:13px}
+@media(max-width:480px){.topbar{padding:6px}.topbar-btn{gap:6px;padding:6px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>🎓 Course Planner</h1>
-<p class="sub"><span id="today"></span> · <span id="sync">📱 Lokal</span><button id="accountBtn" onclick="signOut()">· Keluar</button></p>
-<nav id="nav"></nav>
+<p class="sub"><span id="today"></span> · <span id="sync">📱 Lokal</span></p>
+<div id="topbar" class="topbar" hidden>
+  <nav id="nav"></nav>
+  <div class="profile-area">
+    <button id="profileBtn" class="topbar-btn" type="button" aria-label="Profil" title="Profil" aria-expanded="false" aria-controls="profileMenu" onclick="toggleProfileMenu()"><span class="avatar" aria-hidden="true">P</span></button>
+    <div id="profileMenu" class="profile-menu" hidden>
+      <p id="profileName" class="profile-name">Pengguna lokal</p>
+      <p id="profileDetail" class="profile-detail">Akun tersinkron</p>
+      <p class="theme-label">Mode tampilan</p>
+      <div class="theme-options" aria-label="Mode tampilan">
+        <button type="button" data-theme-choice="light" onclick="setTheme('light')">Terang</button>
+        <button type="button" data-theme-choice="dark" onclick="setTheme('dark')">Gelap</button>
+        <button type="button" data-theme-choice="system" onclick="setTheme('system')">Sistem</button>
+      </div>
+      <div class="profile-actions">
+        <button class="menu-action" type="button" onclick="openSettings()"><span aria-hidden="true">⚙</span><span>Pengaturan</span></button>
+        <button class="menu-action" type="button" onclick="signOut()"><span aria-hidden="true">↪</span><span>Keluar</span></button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="view"></div>
+<div id="settingsLayer" hidden></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -67,23 +105,33 @@ var SUPABASE_ANON_KEY='sb_publishable_BOgAPc5LgP5-knHVjoEhFA_jOaheyX3';
 var DAYS=['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],KEY='kuliah-planner-v1',tab='dash';
 var S={courses:[],schedule:[],att:[],tasks:[]};
 try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
-var supabaseClient=null,account=null,storageKey=KEY,tm=null,authBusy=false,authSignup=false,legacyImportPending=false;
+var supabaseClient=null,account=null,storageKey=KEY,tm=null,authBusy=false,legacyImportPending=false,themeChoice='system';
+try{var savedTheme=localStorage.getItem('kuliah-planner-theme');if(['light','dark','system'].indexOf(savedTheme)>=0)themeChoice=savedTheme}catch(e){}
+function applyTheme(){if(themeChoice==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',themeChoice)}
+function setTheme(theme){if(['light','dark','system'].indexOf(theme)<0)return;themeChoice=theme;try{localStorage.setItem('kuliah-planner-theme',theme)}catch(e){}applyTheme();syncThemeButtons()}
+function syncThemeButtons(){document.querySelectorAll('[data-theme-choice]').forEach(function(button){button.setAttribute('aria-pressed',button.dataset.themeChoice===themeChoice?'true':'false')})}
+applyTheme();
 function push(){if(!supabaseClient||!account)return;clearTimeout(tm);tm=setTimeout(function(){tm=null;supabaseClient.from('planner_state').upsert({user_id:account.id,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()},{onConflict:'user_id'}).then(function(result){if(result.error)throw result.error;if(legacyImportPending){try{localStorage.setItem('kuliah-planner-legacy-imported','1')}catch(e){}legacyImportPending=false}badge('☁️ Tersinkron')}).catch(function(){badge('⚠️ Gagal sync (tersimpan lokal)')})},400)}
 function save(){S.rev=Date.now();try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}push()}
 function badge(t){var e=document.getElementById('sync');if(e)e.textContent=t}
+function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),avatar=document.querySelector('.avatar');if(topbar)topbar.hidden=!account;if(name)name.textContent=account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
+function toggleProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn'),open=menu.hidden;menu.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');if(open)updateProfile()}
+function closeProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn');if(menu&&!menu.hidden){menu.hidden=true;button.setAttribute('aria-expanded','false')}}
+function openSettings(){closeProfileMenu();var layer=document.getElementById('settingsLayer');layer.innerHTML='<div class="modal-backdrop" onclick="if(event.target===this)closeSettings()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><div class="modal-head"><h2 id="settingsTitle">Pengaturan</h2><button class="x" type="button" aria-label="Tutup pengaturan" onclick="closeSettings()">✕</button></div><div class="settings-section"><h3>Tampilan</h3><p class="theme-label">Pilih mode warna</p><div class="theme-options" aria-label="Mode tampilan"><button type="button" data-theme-choice="light" onclick="setTheme(\'light\')">Terang</button><button type="button" data-theme-choice="dark" onclick="setTheme(\'dark\')">Gelap</button><button type="button" data-theme-choice="system" onclick="setTheme(\'system\')">Sistem</button></div></div><div class="settings-section"><h3>Penyimpanan</h3><p>'+(account?'Data tersimpan dan disinkronkan dengan akun.':'Data tersimpan di browser ini.')+'</p></div></section></div>';layer.hidden=false;syncThemeButtons()}
+function closeSettings(){var layer=document.getElementById('settingsLayer');if(layer){layer.hidden=true;layer.innerHTML=''}}
+document.addEventListener('click',function(event){if(!event.target.closest('.profile-area'))closeProfileMenu()});
 function renderAuth(message){
   document.getElementById('nav').innerHTML='';
-  document.getElementById('accountBtn').style.display='none';
-  document.getElementById('view').innerHTML='<div class="card auth"><h2>'+(authSignup?'Create account':'Sign in')+'</h2><p>Use the same account on each device to access your planner.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="'+(authSignup?'new-password':'current-password')+'" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':authSignup?'Create account':'Sign in')+'</button></form><p><button class="x" style="color:var(--pr)" onclick="authSignup=!authSignup;renderAuth()">'+(authSignup?'Already have an account? Sign in':'New here? Create an account')+'</button></p></div>';
+  updateProfile();
+  document.getElementById('view').innerHTML='<div class="card auth"><h2>Sign in</h2><p>Use the account provided by the planner administrator.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':'Sign in')+'</button></form></div>';
 }
 function submitAuth(event){
   event.preventDefault();if(!supabaseClient)return;
   var email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
   authBusy=true;renderAuth();
-  var action=authSignup?supabaseClient.auth.signUp({email:email,password:password}):supabaseClient.auth.signInWithPassword({email:email,password:password});
-  action.then(function(result){if(result.error)throw result.error;authBusy=false;if(authSignup&&!result.data.session)renderAuth('Check your email to confirm your account.');}).catch(function(error){authBusy=false;renderAuth(error.message||'Unable to sign in.')});
+  supabaseClient.auth.signInWithPassword({email:email,password:password}).then(function(result){if(result.error)throw result.error;authBusy=false;}).catch(function(error){authBusy=false;renderAuth(error.message||'Unable to sign in.')});
 }
-function signOut(){if(supabaseClient)supabaseClient.auth.signOut()}
+function signOut(){closeProfileMenu();if(supabaseClient)supabaseClient.auth.signOut()}
 function useSession(session){
   var next=session&&session.user;
   if(!next){account=null;storageKey=KEY;badge('🔒 Sign in required');renderAuth();return}
@@ -101,9 +149,8 @@ function useSession(session){
     if(result.data&&result.data.data){var remote=Object.assign({courses:[],schedule:[],att:[],tasks:[]},result.data.data);if((+remote.rev||0)>(+S.rev||0))S=remote;else if((+S.rev||0)>(+remote.rev||0))pushLocal=true;}
     if(backfillAttendance())save();
     try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}
-    document.getElementById('accountBtn').style.display='inline';
     render();if(result.data&&!pushLocal)badge('☁️ Synced');if(!result.data||pushLocal)push();
-  }).catch(function(error){document.getElementById('accountBtn').style.display='inline';badge('⚠️ DB unavailable');render();console.error(error)});
+  }).catch(function(error){badge('⚠️ DB unavailable');render();console.error(error)});
 }
 function startApp(){
   var configured=SUPABASE_URL.indexOf('YOUR_')<0&&SUPABASE_ANON_KEY.indexOf('YOUR_')<0;
@@ -139,18 +186,19 @@ function opts(sel){return S.courses.map(function(c){return '<option value="'+c.i
 var todayIdx=(new Date().getDay()+6)%7,todayISO=iso(new Date());
 document.getElementById('today').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-var TABS={dash:'Beranda',courses:'Mata Kuliah',tasks:'Tugas',att:'Absensi',schedule:'Jadwal'};
+var TABS={dash:'Beranda',schedule:'Jadwal',tasks:'Tugas',att:'Absensi',courses:'Mata Kuliah'};
 var ed={k:null,id:null};
 function go(t){tab=t;ed={k:null,id:null};render()}
 function edit(k,id){ed={k:k,id:id};render()}
 function addNew(k){ed={k:k,id:null};render()}
 function cancel(){ed={k:null,id:null};render()}
 function modalDialog(title,content){return '<div class="modal-backdrop" onclick="if(event.target===this)cancel()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><h2 id="modalTitle">'+title+'</h2><button class="x" type="button" aria-label="Tutup" onclick="cancel()">✕</button></div>'+content+'</section></div>'}
-document.addEventListener('keydown',function(event){if(event.key==='Escape'&&(ed.k==='courses'||ed.k==='tasks'||ed.k==='att'))cancel()});
+document.addEventListener('keydown',function(event){if(event.key==='Escape'){if(ed.k==='courses'||ed.k==='tasks'||ed.k==='att')cancel();closeProfileMenu();closeSettings()}});
 function cur(k){return ed.k===k?S[k].find(function(x){return x.id===ed.id}):null}
 function render(){
   document.getElementById('nav').innerHTML=Object.keys(TABS).map(function(k){return '<button class="'+(k===tab?'on':'')+'" onclick="go(\''+k+'\')">'+TABS[k]+'</button>'}).join('');
   document.getElementById('view').innerHTML=VIEWS[tab]();
+  updateProfile();
 }
 function needCourse(){return S.courses.length?'':'<div class="card empty">Tambahkan mata kuliah dulu di tab “Mata Kuliah”.</div>'}
 function del(key,id){if(!confirm('Hapus data ini?'))return;S[key]=S[key].filter(function(x){return x.id!==id});if(key==='courses'){['schedule','att','tasks'].forEach(function(k){S[k]=S[k].filter(function(x){return x.cid!==id})})}if(ed.id===id)ed={k:null,id:null};save();render()}
