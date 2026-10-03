@@ -33,25 +33,26 @@ document.addEventListener('click',function(event){if(!event.target.closest('.pro
 function renderAuth(message){
   document.getElementById('nav').innerHTML='';
   updateProfile();
-  document.getElementById('view').innerHTML='<div class="card auth"><h2>Sign in</h2><p>Use the account provided by the planner administrator.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':'Sign in')+'</button></form></div>';
+  document.getElementById('view').innerHTML='<div class="card auth"><h2>Masuk</h2><p>Gunakan akun yang diberikan oleh admin planner.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Kata sandi</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Mohon tunggu...':'Masuk')+'</button></form></div>';
 }
 function submitAuth(event){
   event.preventDefault();if(!supabaseClient)return;
   var email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
   authBusy=true;renderAuth();
-  supabaseClient.auth.signInWithPassword({email:email,password:password}).then(function(result){if(result.error)throw result.error;authBusy=false;}).catch(function(error){authBusy=false;renderAuth(error.message||'Unable to sign in.')});
+  supabaseClient.auth.signInWithPassword({email:email,password:password}).then(function(result){if(result.error)throw result.error;authBusy=false;}).catch(function(error){authBusy=false;renderAuth(authError(error))});
 }
+function authError(e){var m=(e&&e.message)||'';if(/invalid login/i.test(m))return 'Email atau kata sandi salah.';if(/email not confirmed/i.test(m))return 'Email belum dikonfirmasi.';if(/rate limit|too many/i.test(m))return 'Terlalu banyak percobaan. Coba lagi nanti.';if(/network|fetch/i.test(m))return 'Tidak ada koneksi internet.';return m||'Gagal masuk.'}
 function signOut(){closeProfileMenu();if(supabaseClient)supabaseClient.auth.signOut()}
 function useSession(session){
   var next=session&&session.user;
-  if(!next){account=null;storageKey=KEY;badge('🔒 Sign in required');renderAuth();return}
+  if(!next){account=null;storageKey=KEY;badge('🔒 Perlu masuk');renderAuth();return}
   if(account&&account.id===next.id)return;
   account=next;storageKey=KEY+'-user-'+account.id;
   var local=null,legacy=null;
   try{local=JSON.parse(localStorage.getItem(storageKey)||'null');if(!local&&!localStorage.getItem('kuliah-planner-legacy-imported'))legacy=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
   legacyImportPending=!!legacy;
   S=Object.assign({courses:[],schedule:[],att:[],tasks:[]},local||legacy||{});
-  badge('☁️ Loading...');
+  badge('☁️ Memuat...');
   supabaseClient.from('planner_state').select('data').eq('user_id',account.id).maybeSingle().then(function(result){
     if(!account||account.id!==next.id)return;
     if(result.error)throw result.error;
@@ -59,19 +60,19 @@ function useSession(session){
     if(result.data&&result.data.data){var remote=Object.assign({courses:[],schedule:[],att:[],tasks:[]},result.data.data);if((+remote.rev||0)>(+S.rev||0))S=remote;else if((+S.rev||0)>(+remote.rev||0))pushLocal=true;}
     if(backfillAttendance())save();
     try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}
-    render();if(result.data&&!pushLocal)badge('☁️ Synced');if(!result.data||pushLocal)push();
-  }).catch(function(error){badge('⚠️ DB unavailable');render();console.error(error)});
+    render();if(result.data&&!pushLocal)badge('☁️ Tersinkron');if(!result.data||pushLocal)push();
+  }).catch(function(error){badge('⚠️ Database tidak tersedia');render();console.error(error)});
 }
 function startApp(){
   var configured=SUPABASE_URL.indexOf('YOUR_')<0&&SUPABASE_ANON_KEY.indexOf('YOUR_')<0;
   if(configured&&window.supabase&&window.supabase.createClient){
     supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
     supabaseClient.auth.onAuthStateChange(function(event,session){setTimeout(function(){useSession(session)},0)});
-    supabaseClient.auth.getSession().then(function(result){if(result.error)throw result.error;useSession(result.data.session)}).catch(function(){renderAuth('Could not connect to Supabase.')});
-    badge('🔒 Sign in required');renderAuth();return;
+    supabaseClient.auth.getSession().then(function(result){if(result.error)throw result.error;useSession(result.data.session)}).catch(function(){renderAuth('Tidak dapat terhubung ke server.')});
+    badge('🔒 Perlu masuk');renderAuth();return;
   }
   if(backfillAttendance())save();
-  badge('📱 Local · Supabase not configured');render();
+  badge('📱 Lokal · Supabase belum dikonfigurasi');render();
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]})}
@@ -79,6 +80,9 @@ function v(id){return document.getElementById(id).value.trim()}
 function cn(id){var c=S.courses.find(function(x){return x.id===id});return c?esc(c.name):'(dihapus)'}
 function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
 function backfillAttendance(){
+  if(S.backfilled)return false;
+  S.backfilled=true;
+  if(S.att.length)return true;
   var start=new Date(2026,8,7),end=new Date(2026,11,26),last=new Date();last.setDate(last.getDate()-1);last.setHours(0,0,0,0);if(last>end)last=end;
   var changed=false;
   for(var day=new Date(start);day<=last;day.setDate(day.getDate()+1)){
