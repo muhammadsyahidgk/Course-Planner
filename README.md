@@ -3,7 +3,7 @@
 Aplikasi perkuliahan pribadi untuk mengelola jadwal, absensi, tugas, dan daftar mata kuliah. Data disimpan di akun dan disinkronkan antarperangkat.
 
 ## Fitur
-- **Mata kuliah:** nama, dosen, SKS, dan hingga 2 waktu kelas per mata kuliah
+- **Mata kuliah:** pilih atau cari nama dari daftar yang disediakan, lalu atur dosen, SKS, dan hingga 2 waktu kelas per mata kuliah
 - **Jadwal:** tampilan jadwal mingguan dari data mata kuliah
 - **Absensi:** catat kehadiran harian (Hadir, Izin, Sakit, Alpa, Tidak ada), rekap persentase, dan riwayat yang bisa diedit
 - **Tugas:** judul, keterangan, tenggat, dan tanda selesai
@@ -11,8 +11,9 @@ Aplikasi perkuliahan pribadi untuk mengelola jadwal, absensi, tugas, dan daftar 
 - **Tampilan:** mode terang, gelap, atau ikut sistem
 
 ## Struktur Berkas
-- `index.html`: kerangka halaman
-- `style.css`: tampilan
+- `index.html`: halaman utama dengan desain baru
+- `style.css`: gaya dasar dan gaya desain baru
+- `index.html.old`, `style.css.old`: salinan halaman dan gaya asli
 - `script.js`: logika aplikasi dan koneksi Supabase
 
 ## Penyiapan

@@ -3,42 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Course Planner</title>
+<meta name="theme-color" content="#142b45">
+<title>Course Planner — Ruang Belajarmu</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="brandbar">
-<div class="bar-inner brandbar-inner">
-<h1>🎓 Course Planner</h1>
-<div class="profile-area" id="profileArea" hidden>
-  <button id="profileBtn" class="topbar-btn" type="button" aria-label="Profil" title="Profil" aria-expanded="false" aria-controls="profileMenu" onclick="toggleProfileMenu()"><span class="avatar" aria-hidden="true">P</span></button>
-  <div id="profileMenu" class="profile-menu" hidden>
-    <p id="profileName" class="profile-name">Pengguna lokal</p>
-    <p id="profileDetail" class="profile-detail">Akun tersinkron</p>
-    <p class="theme-label">Mode tampilan</p>
-    <div class="theme-options" aria-label="Mode tampilan">
-      <button type="button" data-theme-choice="light" onclick="setTheme('light')">Terang</button>
-      <button type="button" data-theme-choice="dark" onclick="setTheme('dark')">Gelap</button>
-      <button type="button" data-theme-choice="system" onclick="setTheme('system')">Sistem</button>
-    </div>
-    <div class="profile-actions">
-      <button class="menu-action" type="button" onclick="openSettings()"><span aria-hidden="true">⚙</span><span>Pengaturan</span></button>
-      <button class="menu-action" type="button" onclick="signOut()"><span aria-hidden="true">↪</span><span>Keluar</span></button>
+<header class="brandbar">
+  <div class="bar-inner brandbar-inner">
+    <a class="brand" href="index.html" aria-label="Course Planner, beranda">
+      <span class="brand-mark" aria-hidden="true">C</span>
+      <span class="brand-copy"><strong>Course Planner</strong><small>RUANG BELAJARMU</small></span>
+    </a>
+    <div class="profile-area" id="profileArea" hidden>
+      <button id="profileBtn" class="topbar-btn" type="button" aria-label="Profil" title="Profil" aria-expanded="false" aria-controls="profileMenu" onclick="toggleProfileMenu()"><span class="avatar" aria-hidden="true">P</span></button>
+      <div id="profileMenu" class="profile-menu" hidden>
+        <p id="profileName" class="profile-name">Pengguna lokal</p>
+        <p id="profileDetail" class="profile-detail">Akun tersinkron</p>
+        <p class="theme-label">Mode tampilan</p>
+        <div class="theme-options" aria-label="Mode tampilan">
+          <button type="button" data-theme-choice="light" onclick="setTheme('light')">Terang</button>
+          <button type="button" data-theme-choice="dark" onclick="setTheme('dark')">Gelap</button>
+          <button type="button" data-theme-choice="system" onclick="setTheme('system')">Sistem</button>
+        </div>
+        <div class="profile-actions">
+          <button class="menu-action" type="button" onclick="openSettings()"><span aria-hidden="true">⚙</span><span>Pengaturan</span></button>
+          <button class="menu-action" type="button" onclick="signOut()"><span aria-hidden="true">↪</span><span>Keluar</span></button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-</div>
-</div>
+</header>
 <div id="topbar" class="topbar" hidden>
   <div class="bar-inner topbar-inner" id="topbarInner">
-  <nav id="nav"></nav>
+    <nav id="nav" aria-label="Navigasi utama"></nav>
   </div>
 </div>
-<div class="wrap">
-<p class="sub"><span id="today"></span> · <span id="sync">📱 Lokal</span></p>
-<div id="view"></div>
-<div id="settingsLayer" hidden></div>
-</div>
+<main class="wrap">
+  <div class="page-intro">
+    <div><span class="eyebrow">RUANG BELAJAR ANDA</span><p class="sub"><span id="today"></span></p></div>
+    <span class="sync-pill"><span class="sync-dot" aria-hidden="true"></span><span id="sync">📱 Lokal</span></span>
+  </div>
+  <div id="view"></div>
+  <div id="settingsLayer" hidden></div>
+</main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
 </body>

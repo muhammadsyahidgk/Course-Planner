@@ -1,6 +1,7 @@
 var SUPABASE_URL='https://kuxpcqclmekqfrhnfryr.supabase.co';
 var SUPABASE_ANON_KEY='sb_publishable_BOgAPc5LgP5-knHVjoEhFA_jOaheyX3';
 var DAYS=['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],KEY='kuliah-planner-v1',tab='dash';
+var COURSE_NAMES=['MKP Kecerdasan Komputasional','MKP Pengenalan Pola','MKP Sistem Temu Kembali Informasi','MKP Jaringan Multimedia','Human Computer Interaction','Pemrograman Berbasis Platform','Cloud Computing','Pengolahan Citra Digital','Machine Learning','Kompleksitas Algoritma','Statistik','Aljabar Dan Matriks','Pemrograman Berorientasi Obyek','Rekayasa Perangkat Lunak','Organisasi Dan Arsitektur Komputer','Kalkulus','Pengenalan Pemrograman','Etika Profesi','Basis Data'];
 var S={courses:[],schedule:[],att:[],tasks:[]};
 try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
 var supabaseClient=null,account=null,storageKey=KEY,tm=null,authBusy=false,legacyImportPending=false,themeChoice='system';
@@ -102,6 +103,7 @@ function backfillAttendance(){
 }
 function fmt(d){return new Date(d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}
 function opts(sel){return S.courses.map(function(c){return '<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')}
+function courseNameOptions(current){var names=COURSE_NAMES.filter(function(name){return !S.courses.some(function(course){return course.name===name&&(!current||course.id!==current.id)})||current&&current.name===name}),options=names.map(function(name){return '<option value="'+esc(name)+'"'+(current&&current.name===name?' selected':'')+'>'+esc(name)+'</option>'});if(current&&COURSE_NAMES.indexOf(current.name)<0)options.unshift('<option value="'+esc(current.name)+'" selected>'+esc(current.name)+' (data lama)</option>');return '<option value="" disabled'+(current?'':' selected')+'>— pilih mata kuliah —</option>'+options.join('')}
 var todayIdx=(new Date().getDay()+6)%7,todayISO=iso(new Date());
 document.getElementById('today').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
@@ -144,7 +146,7 @@ dash:function(){
 courses:function(){
   var e=cur('courses'),sc=e?scheds(e.id):[];
   function scheduleFields(index,label){var slot=sc[index],id=index+1;return '<div class="mu" style="margin:8px 0 4px">'+label+'</div><div class="row"><select id="cDay'+id+'"><option value="">— tanpa jadwal —</option>'+DAYS.map(function(d,i){return '<option value="'+i+'"'+(slot&&slot.day===i?' selected':'')+'>'+d+'</option>'}).join('')+'</select><input id="cS'+id+'" type="time" value="'+(slot?slot.s:'08:00')+'"><input id="cE'+id+'" type="time" value="'+(slot?slot.e:'09:40')+'"><input id="cR'+id+'" placeholder="Ruang" value="'+(slot?esc(slot.room||''):'')+'"></div>'}
-  var f='<div class="row"><input id="cName" placeholder="Nama mata kuliah" value="'+(e?esc(e.name):'')+'"><input id="cLec" placeholder="Dosen" value="'+(e?esc(e.lec||''):'')+'"><input id="cSks" type="number" min="1" max="6" placeholder="SKS" value="'+(e?esc(e.sks||''):'')+'"></div>'+
+  var f='<div class="row"><select id="cName" aria-label="Pilih mata kuliah" required onchange="this.setCustomValidity(\'\')">'+courseNameOptions(e)+'</select><input id="cLec" placeholder="Dosen" value="'+(e?esc(e.lec||''):'')+'"><input id="cSks" type="number" min="1" max="6" placeholder="SKS" value="'+(e?esc(e.sks||''):'')+'"></div>'+
   scheduleFields(0,'Waktu kelas 1')+'<div id="secondScheduleFields"'+(sc.length>1?'':' hidden')+'>'+scheduleFields(1,'Waktu kelas 2')+'</div>'+(sc.length>1?'':'<button id="addSecondSchedule" class="btn secondary" type="button" onclick="showSecondSchedule()">＋ Tambah waktu kelas ke-2</button>')+btns(e,'saveCourse','Tambah');
   var modal=ed.k==='courses'?modalDialog(e?'Edit mata kuliah':'Tambah mata kuliah',f):'';
   var rows=S.courses.map(function(c){var slots=scheds(c.id),schedule=slots.length?slots.map(function(slot){return DAYS[slot.day]+', '+esc(slot.s)+'–'+esc(slot.e)+(slot.room?' · '+esc(slot.room):'')}).join('<br>'):'Belum ada jadwal';return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.lec||'-')+'</td><td>'+esc(c.sks||'-')+'</td><td>'+schedule+'</td><td class="table-actions">'+acts('courses',c.id)+'</td></tr>'});
@@ -184,8 +186,10 @@ tasks:function(){
 }};
 
 function saveCourse(){
-  var n=v('cName');if(!n)return;
+  var input=document.getElementById('cName'),n=v('cName');if(!n)return;
   var e=cur('courses');
+  if(COURSE_NAMES.indexOf(n)<0&&!(e&&e.name===n)){input.setCustomValidity('Pilih nama mata kuliah dari daftar yang tersedia.');input.reportValidity();return}
+  if(!(e&&e.name===n)&&S.courses.some(function(course){return course.name===n})){input.setCustomValidity('Mata kuliah ini sudah ada di daftar.');input.reportValidity();return}
   if(e){e.name=n;e.lec=v('cLec');e.sks=v('cSks')}
   else{e={id:uid(),name:n,lec:v('cLec'),sks:v('cSks')};S.courses.push(e)}
   S.schedule=S.schedule.filter(function(x){return x.cid!==e.id});
