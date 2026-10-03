@@ -12,12 +12,24 @@ applyTheme();
 function push(){if(!supabaseClient||!account)return;clearTimeout(tm);tm=setTimeout(function(){tm=null;supabaseClient.from('planner_state').upsert({user_id:account.id,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()},{onConflict:'user_id'}).then(function(result){if(result.error)throw result.error;if(legacyImportPending){try{localStorage.setItem('kuliah-planner-legacy-imported','1')}catch(e){}legacyImportPending=false}badge('☁️ Tersinkron')}).catch(function(){badge('⚠️ Gagal sync (tersimpan lokal)')})},400)}
 function save(){S.rev=Date.now();try{localStorage.setItem(storageKey,JSON.stringify(S))}catch(e){}push()}
 function badge(t){var e=document.getElementById('sync');if(e)e.textContent=t}
-function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),avatar=document.querySelector('.avatar');if(topbar)topbar.hidden=!account;if(name)name.textContent=account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
+function syncProfileBar(){
+  var profile=document.getElementById('profileArea'),brandInner=document.querySelector('.brandbar-inner'),topbar=document.getElementById('topbar'),navInner=document.getElementById('topbarInner');if(!profile||!brandInner||!topbar||!navInner)return;
+  var stickyTop=parseFloat(getComputedStyle(topbar).top)||0,moveToNav=!!account&&!topbar.hidden&&topbar.getBoundingClientRect().top<=stickyTop+1,target=moveToNav?navInner:brandInner;
+  if(profile.parentElement===target)return;
+  if(profile._barAnimation)profile._barAnimation.cancel();
+  var start=profile.getBoundingClientRect();target.appendChild(profile);var end=profile.getBoundingClientRect();
+  if(!profile.animate||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var x=start.left-end.left,y=start.top-end.top;if(Math.abs(x)+Math.abs(y)<1)return;
+  profile._barAnimation=profile.animate([{transform:'translate('+x+'px, '+y+'px)',opacity:.8},{transform:'translate(0, 0)',opacity:1}],{duration:220,easing:'cubic-bezier(.2,.7,.2,1)'});
+}
+window.addEventListener('scroll',syncProfileBar,{passive:true});
+window.addEventListener('resize',syncProfileBar);
+function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),profileArea=document.getElementById('profileArea'),avatar=document.querySelector('.avatar');if(topbar)topbar.hidden=!account;if(profileArea)profileArea.hidden=!account;syncProfileBar();if(name)name.textContent=account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
 function toggleProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn'),open=menu.hidden;menu.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');if(open)updateProfile()}
 function closeProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn');if(menu&&!menu.hidden){menu.hidden=true;button.setAttribute('aria-expanded','false')}}
 function openSettings(){closeProfileMenu();var layer=document.getElementById('settingsLayer');layer.innerHTML='<div class="modal-backdrop" onclick="if(event.target===this)closeSettings()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><div class="modal-head"><h2 id="settingsTitle">Pengaturan</h2><button class="x" type="button" aria-label="Tutup pengaturan" onclick="closeSettings()">✕</button></div><div class="settings-section"><h3>Tampilan</h3><p class="theme-label">Pilih mode warna</p><div class="theme-options" aria-label="Mode tampilan"><button type="button" data-theme-choice="light" onclick="setTheme(\'light\')">Terang</button><button type="button" data-theme-choice="dark" onclick="setTheme(\'dark\')">Gelap</button><button type="button" data-theme-choice="system" onclick="setTheme(\'system\')">Sistem</button></div></div><div class="settings-section"><h3>Penyimpanan</h3><p>'+(account?'Data tersimpan dan disinkronkan dengan akun.':'Data tersimpan di browser ini.')+'</p></div></section></div>';layer.hidden=false;syncThemeButtons()}
 function closeSettings(){var layer=document.getElementById('settingsLayer');if(layer){layer.hidden=true;layer.innerHTML=''}}
-document.addEventListener('click',function(event){if(!event.target.closest('.profile-area'))closeProfileMenu()});
+document.addEventListener('click',function(event){if(!event.target.closest('.profile-area'))closeProfileMenu();if(!event.target.closest('#nav'))closeNavMenu()});
 function renderAuth(message){
   document.getElementById('nav').innerHTML='';
   updateProfile();
@@ -86,23 +98,26 @@ document.getElementById('today').textContent=new Date().toLocaleDateString('id-I
 
 var TABS={dash:'Beranda',schedule:'Jadwal',tasks:'Tugas',att:'Absensi',courses:'Mata Kuliah'};
 var ed={k:null,id:null};
-function go(t){tab=t;ed={k:null,id:null};render()}
+function toggleNavMenu(){var nav=document.getElementById('nav'),button=document.getElementById('navToggle'),open=nav.classList.toggle('menu-open');button.setAttribute('aria-expanded',open?'true':'false');button.setAttribute('aria-label',open?'Tutup menu navigasi':'Buka menu navigasi')}
+function closeNavMenu(){var nav=document.getElementById('nav'),button=document.getElementById('navToggle');if(nav)nav.classList.remove('menu-open');if(button){button.setAttribute('aria-expanded','false');button.setAttribute('aria-label','Buka menu navigasi')}}
+function go(t){closeNavMenu();tab=t;ed={k:null,id:null};render()}
 function edit(k,id){ed={k:k,id:id};render()}
 function addNew(k){ed={k:k,id:null};render()}
 function cancel(){ed={k:null,id:null};render()}
 function modalDialog(title,content){return '<div class="modal-backdrop" onclick="if(event.target===this)cancel()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><h2 id="modalTitle">'+title+'</h2><button class="x" type="button" aria-label="Tutup" onclick="cancel()">✕</button></div>'+content+'</section></div>'}
-document.addEventListener('keydown',function(event){if(event.key==='Escape'){if(ed.k==='courses'||ed.k==='tasks'||ed.k==='att')cancel();closeProfileMenu();closeSettings()}});
+document.addEventListener('keydown',function(event){if(event.key==='Escape'){if(ed.k==='courses'||ed.k==='tasks'||ed.k==='att')cancel();closeNavMenu();closeProfileMenu();closeSettings()}});
 function cur(k){return ed.k===k?S[k].find(function(x){return x.id===ed.id}):null}
 function render(){
-  document.getElementById('nav').innerHTML=Object.keys(TABS).map(function(k){return '<button class="'+(k===tab?'on':'')+'" onclick="go(\''+k+'\')">'+TABS[k]+'</button>'}).join('');
+  document.getElementById('nav').innerHTML='<button id="navToggle" class="nav-toggle" type="button" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="navLinks" onclick="toggleNavMenu()"><span></span><span></span><span></span></button><div id="navLinks" class="nav-links">'+Object.keys(TABS).map(function(k){return '<button class="'+(k===tab?'on':'')+'" aria-current="'+(k===tab?'page':'false')+'" onclick="go(\''+k+'\')">'+TABS[k]+'</button>'}).join('')+'</div>';
   document.getElementById('view').innerHTML=VIEWS[tab]();
   updateProfile();
 }
-function needCourse(){return S.courses.length?'':'<div class="card empty">Tambahkan mata kuliah dulu di tab “Mata Kuliah”.</div>'}
+function needCourse(){var isTasks=tab==='tasks';return S.courses.length?'':'<div class="card"><h2>'+(isTasks?'Daftar tugas':'Kehadiran')+'</h2>'+dataTable(isTasks?['Selesai','Tugas','Mata kuliah','Keterangan','Tenggat','Aksi']:['Mata kuliah','Pertemuan','Kehadiran'],[],'Tambahkan mata kuliah dulu di tab “Mata Kuliah”.',isTasks?'task-table':'')+'</div>'}
 function del(key,id){if(!confirm('Hapus data ini?'))return;S[key]=S[key].filter(function(x){return x.id!==id});if(key==='courses'){['schedule','att','tasks'].forEach(function(k){S[k]=S[k].filter(function(x){return x.cid!==id})})}if(ed.id===id)ed={k:null,id:null};save();render()}
 function pct(cid){var a=S.att.filter(function(x){return x.cid===cid&&x.st!=='Tidak ada'});if(!a.length)return null;return Math.round(a.filter(function(x){return x.st==='Hadir'}).length/a.length*100)}
 function acts(k,id){return '<button class="x" style="color:var(--pr)" title="Edit" onclick="edit(\''+k+'\',\''+id+'\')">✎</button><button class="x" title="Hapus" onclick="del(\''+k+'\',\''+id+'\')">✕</button>'}
 function btns(e,fn,label){return '<button class="btn" onclick="'+fn+'()">'+(e?'Simpan perubahan':label)+'</button>'+(e?' <button class="btn" style="background:var(--mu)" onclick="cancel()">Batal</button>':'')}
+function dataTable(headers,rows,empty,className){return '<div class="table-wrap"><table class="data-table '+(className||'')+'"><thead><tr>'+headers.map(function(header){return '<th>'+header+'</th>'}).join('')+'</tr></thead><tbody>'+(rows.length?rows.join(''):'<tr><td class="table-empty" colspan="'+headers.length+'">'+empty+'</td></tr>')+'</tbody></table></div>'}
 function scheds(cid){return S.schedule.filter(function(x){return x.cid===cid}).sort(function(a,b){return a.day-b.day||a.s.localeCompare(b.s)})}
 function attendanceCourses(date,selected){var weekday=(new Date(date+'T00:00').getDay()+6)%7,courses=S.courses.filter(function(c){return S.schedule.some(function(x){return x.cid===c.id&&x.day===weekday})});if(selected&&!courses.some(function(c){return c.id===selected})){var current=S.courses.find(function(c){return c.id===selected});if(current)courses.push(current)}return courses}
 function attendanceOpts(date,selected){return attendanceCourses(date,selected).map(function(c){return '<option value="'+c.id+'"'+(c.id===selected?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')}
@@ -123,37 +138,40 @@ courses:function(){
   var f='<div class="row"><input id="cName" placeholder="Nama mata kuliah" value="'+(e?esc(e.name):'')+'"><input id="cLec" placeholder="Dosen" value="'+(e?esc(e.lec||''):'')+'"><input id="cSks" type="number" min="1" max="6" placeholder="SKS" value="'+(e?esc(e.sks||''):'')+'"></div>'+
   scheduleFields(0,'Waktu kelas 1')+'<div id="secondScheduleFields"'+(sc.length>1?'':' hidden')+'>'+scheduleFields(1,'Waktu kelas 2')+'</div>'+(sc.length>1?'':'<button id="addSecondSchedule" class="btn secondary" type="button" onclick="showSecondSchedule()">＋ Tambah waktu kelas ke-2</button>')+btns(e,'saveCourse','Tambah');
   var modal=ed.k==='courses'?modalDialog(e?'Edit mata kuliah':'Tambah mata kuliah',f):'';
-  return modal+'<div class="card"><div class="list-heading"><h2>Daftar ('+S.courses.length+' MK, '+S.courses.reduce(function(a,c){return a+(+c.sks||0)},0)+' SKS)</h2><button class="btn" onclick="addNew(\'courses\')">＋ Tambah</button></div>'+(S.courses.length?S.courses.map(function(c){var slots=scheds(c.id);return '<div class="item"><div class="grow"><b>'+esc(c.name)+'</b><div class="mu">'+esc(c.lec||'-')+' · '+(c.sks||'-')+' SKS</div>'+(slots.length?slots.map(function(slot){return '<div class="mu">'+DAYS[slot.day]+', '+slot.s+'–'+slot.e+(slot.room?' · '+esc(slot.room):'')+'</div>'}).join(''):'<div class="mu">Belum ada jadwal</div>')+'</div>'+acts('courses',c.id)+'</div>'}).join(''):'<div class="empty">Belum ada mata kuliah.</div>')+'</div>';
+  var rows=S.courses.map(function(c){var slots=scheds(c.id),schedule=slots.length?slots.map(function(slot){return DAYS[slot.day]+', '+esc(slot.s)+'–'+esc(slot.e)+(slot.room?' · '+esc(slot.room):'')}).join('<br>'):'Belum ada jadwal';return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.lec||'-')+'</td><td>'+esc(c.sks||'-')+'</td><td>'+schedule+'</td><td class="table-actions">'+acts('courses',c.id)+'</td></tr>'});
+  return modal+'<div class="card"><div class="list-heading"><h2>Daftar ('+S.courses.length+' MK, '+S.courses.reduce(function(a,c){return a+(+c.sks||0)},0)+' SKS)</h2><button class="btn" onclick="addNew(\'courses\')">＋ Tambah</button></div>'+dataTable(['Mata kuliah','Dosen','SKS','Jadwal','Aksi'],rows,'Belum ada mata kuliah.')+'</div>';
 },
 schedule:function(){
-  return DAYS.map(function(d,i){var l=S.schedule.filter(function(x){return x.day===i}).sort(function(a,b){return a.s.localeCompare(b.s)});return '<div class="card"><h2>'+d+(i===todayIdx?' <span class="tag">hari ini</span>':'')+'</h2>'+(l.length?l.map(function(x){var c=S.courses.find(function(y){return y.id===x.cid});return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b><div class="mu">'+x.s+'–'+x.e+(x.room?' · '+esc(x.room):'')+(c&&c.lec?' · '+esc(c.lec):'')+'</div></div></div>'}).join(''):'<div class="empty">Tidak ada jadwal.</div>')+'</div>'}).join('');
+  var rows=S.schedule.slice().sort(function(a,b){return a.day-b.day||a.s.localeCompare(b.s)}).map(function(x){var c=S.courses.find(function(y){return y.id===x.cid});return '<tr><td>'+DAYS[x.day]+(x.day===todayIdx?' <span class="tag">hari ini</span>':'')+'</td><td>'+cn(x.cid)+'</td><td>'+esc(x.s)+'–'+esc(x.e)+'</td><td>'+esc(x.room||'-')+'</td><td>'+esc(c&&c.lec||'-')+'</td></tr>'});
+  return '<div class="card"><h2>Jadwal kuliah</h2>'+dataTable(['Hari','Mata kuliah','Waktu','Ruang','Dosen'],rows,'Belum ada jadwal.')+'</div>';
 },
 att:function(){
   if(!S.courses.length)return needCourse();
   var e=cur('att'),date=e?e.date:todayISO,choices=attendanceCourses(date,e&&e.cid);
+  var dailyChoices=attendanceCourses(todayISO),dailyRows=dailyChoices.map(function(c){var meetings=S.schedule.filter(function(x){return x.cid===c.id&&x.day===todayIdx}).sort(function(a,b){return a.s.localeCompare(b.s)}),record=S.att.find(function(x){return x.cid===c.id&&x.date===todayISO}),times=meetings.map(function(x){return esc(x.s)+'–'+esc(x.e)+(x.room?' · '+esc(x.room):'')}).join(', ');return '<tr><td>'+esc(c.name)+'</td><td>'+times+'</td><td><select class="attendance-status" data-att-cid="'+esc(c.id)+'">'+attendanceStatusOptions(record&&record.st)+'</select></td></tr>'});
+  var daily='<div class="mu" style="margin-bottom:8px">Tanggal otomatis: '+fmt(todayISO)+'</div>'+dataTable(['Mata kuliah','Waktu','Status'],dailyRows,'Tidak ada mata kuliah terjadwal hari ini.')+'<button class="btn" onclick="saveAttendanceDay()" '+(dailyChoices.length?'':'disabled')+'>Simpan kehadiran</button>';
   var f;
   if(e){
     var courseSelect=choices.length?'<select id="aC">'+attendanceOpts(date,e.cid)+'</select>':'<select id="aC" disabled><option value="">Mata kuliah tidak ditemukan</option></select>';
     f='<div class="mu" style="margin-bottom:8px">Tanggal: '+fmt(e.date)+'</div><div class="row">'+courseSelect+'<select id="aS">'+attendanceStatusOptions(e.st).replace('<option value="">— pilih status —</option>','')+'</select></div>'+btns(e,'addAtt','Simpan');
   }else{
-    var rows=choices.map(function(c){var meetings=S.schedule.filter(function(x){return x.cid===c.id&&x.day===todayIdx}).sort(function(a,b){return a.s.localeCompare(b.s)}),record=S.att.find(function(x){return x.cid===c.id&&x.date===todayISO}),times=meetings.map(function(x){return x.s+'–'+x.e+(x.room?' · '+esc(x.room):'')}).join(', ');return '<div class="item"><div class="grow"><b>'+esc(c.name)+'</b><div class="mu">'+times+'</div></div><select class="attendance-status" data-att-cid="'+esc(c.id)+'">'+attendanceStatusOptions(record&&record.st)+'</select></div>'}).join('');
-    f='<div class="mu" style="margin-bottom:8px">Tanggal otomatis: '+fmt(todayISO)+'</div>'+(rows||'<div class="empty">Tidak ada mata kuliah terjadwal hari ini.</div>')+'<button class="btn" onclick="saveAttendanceDay()" '+(choices.length?'':'disabled')+'>Simpan kehadiran</button>';
+    f=daily;
   }
   var modal=ed.k==='att'?modalDialog(e?'Edit kehadiran':'Catat kehadiran',f):'';
-  var rec=S.courses.map(function(c){var a=S.att.filter(function(x){return x.cid===c.id&&x.st!=='Tidak ada'}),p=pct(c.id);return '<div style="margin-bottom:10px"><b>'+esc(c.name)+'</b> <span class="mu">— '+a.length+' pertemuan, hadir '+(p===null?'-':p+'%')+'</span><div class="bar"><i style="width:'+(p||0)+'%"></i></div></div>'}).join('');
+  var rec=S.courses.map(function(c){var a=S.att.filter(function(x){return x.cid===c.id&&x.st!=='Tidak ada'}),p=pct(c.id);return '<tr><td>'+esc(c.name)+'</td><td>'+a.length+'</td><td><span class="mu">'+(p===null?'-':p+'%')+'</span><div class="bar"><i style="width:'+(p||0)+'%"></i></div></td></tr>'});
   var attendanceByDate={};S.att.forEach(function(x){if(!attendanceByDate[x.date])attendanceByDate[x.date]=[];attendanceByDate[x.date].push(x)});
-  var attendanceByWeek={},attendanceDates=Object.keys(attendanceByDate).sort(function(a,b){return b.localeCompare(a)}).slice(0,30);
-  attendanceDates.forEach(function(date){var monday=new Date(date+'T00:00');monday.setDate(monday.getDate()-((monday.getDay()+6)%7));var week=iso(monday);if(!attendanceByWeek[week])attendanceByWeek[week]=[];attendanceByWeek[week].push(date)});
-  var h=Object.keys(attendanceByWeek).sort(function(a,b){return b.localeCompare(a)}).map(function(week){var monday=new Date(week+'T00:00'),sunday=new Date(week+'T00:00');sunday.setDate(sunday.getDate()+6);var weekNumber=Math.floor((Date.UTC(monday.getFullYear(),monday.getMonth(),monday.getDate())-Date.UTC(2026,8,7))/604800000)+1,weekLabel=weekNumber>0?'Minggu '+weekNumber:'Sebelum semester';return '<section class="attendance-week"><h3 class="attendance-week-title"><span class="attendance-week-number">'+weekLabel+'</span><span class="attendance-week-range">'+fmt(week)+' – '+fmt(iso(sunday))+'</span></h3>'+attendanceByWeek[week].map(function(date){var day=new Date(date+'T00:00'),weekday=DAYS[(day.getDay()+6)%7];return '<div class="attendance-day"><h4 class="attendance-date">'+weekday+', '+fmt(date)+'</h4>'+attendanceByDate[date].map(function(x){return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b></div><span class="tag '+(x.st==='Tidak ada'?'no-class':x.st)+'">'+x.st+'</span>'+acts('att',x.id)+'</div>'}).join('')+'</div>'}).join('')+'</section>'}).join('')||'<div class="empty">Belum ada catatan.</div>';
-  return modal+'<div class="card"><div class="list-heading"><h2>Rekap</h2><button class="btn" onclick="addNew(\'att\')">＋ Catat kehadiran</button></div>'+rec+'</div><div class="card"><h2>Riwayat terbaru</h2>'+h+'</div>';
+  var attendanceDates=Object.keys(attendanceByDate).sort(function(a,b){return b.localeCompare(a)}).slice(0,30),historyRows=[];
+  attendanceDates.forEach(function(date){var day=new Date(date+'T00:00'),weekday=DAYS[(day.getDay()+6)%7];attendanceByDate[date].forEach(function(x){return historyRows.push('<tr><td>'+weekday+', '+fmt(date)+'</td><td>'+cn(x.cid)+'</td><td><span class="tag '+(x.st==='Tidak ada'?'no-class':x.st)+'">'+esc(x.st)+'</span></td><td class="table-actions">'+acts('att',x.id)+'</td></tr>')})});
+  return modal+'<div class="card"><div class="list-heading"><h2>Rekap</h2><button class="btn" onclick="addNew(\'att\')">＋ Catat kehadiran</button></div>'+dataTable(['Mata kuliah','Pertemuan','Kehadiran'],rec,'Belum ada mata kuliah.')+'</div><div class="card"><h2>Riwayat terbaru</h2>'+dataTable(['Tanggal','Mata kuliah','Status','Aksi'],historyRows,'Belum ada catatan.')+'</div>';
 },
 tasks:function(){
   if(!S.courses.length)return needCourse();
   var e=cur('tasks');
-  var f='<div class="row"><input id="tT" placeholder="Judul tugas" value="'+(e?esc(e.title):'')+'"><select id="tC">'+opts(e&&e.cid)+'</select><input id="tD" type="date" value="'+(e?e.due:todayISO)+'"></div>'+btns(e,'addTask','Tambah');
+  var f='<div class="row"><input id="tT" placeholder="Judul tugas" value="'+(e?esc(e.title):'')+'"><select id="tC">'+opts(e&&e.cid)+'</select><input id="tD" type="date" value="'+(e?e.due:todayISO)+'"></div><label for="tDesc">Keterangan / detail tugas</label><textarea id="tDesc" placeholder="Tambahkan detail tugas">'+(e?esc(e.description||''):'')+'</textarea>'+btns(e,'addTask','Tambah');
   var modal=ed.k==='tasks'?modalDialog(e?'Edit tugas':'Tambah tugas',f):'';
   var l=S.tasks.slice().sort(function(a,b){return (a.done-b.done)||a.due.localeCompare(b.due)});
-  return modal+'<div class="card"><div class="list-heading"><h2>Daftar tugas ('+S.tasks.filter(function(x){return !x.done}).length+' belum selesai)</h2><button class="btn" onclick="addNew(\'tasks\')">＋ Tambah</button></div>'+(l.length?l.map(function(x){return '<div class="item '+(x.done?'done':'')+'"><input type="checkbox" style="flex:none;width:18px;height:18px" '+(x.done?'checked':'')+' onchange="toggle(\''+x.id+'\')"><div class="grow t"><b class="t">'+esc(x.title)+'</b><div class="mu">'+cn(x.cid)+'</div></div><span class="'+(!x.done&&x.due<todayISO?'late':'mu')+'">'+fmt(x.due)+'</span>'+acts('tasks',x.id)+'</div>'}).join(''):'<div class="empty">Belum ada tugas.</div>')+'</div>';
+  var rows=l.map(function(x){return '<tr class="'+(x.done?'done':'')+'"><td><input class="task-checkbox" type="checkbox" aria-label="Tandai selesai: '+esc(x.title)+'" '+(x.done?'checked':'')+' onchange="toggle(\''+x.id+'\')"></td><td><span class="task-title">'+esc(x.title)+'</span></td><td>'+cn(x.cid)+'</td><td class="task-description">'+esc(x.description||'-')+'</td><td class="'+(!x.done&&x.due<todayISO?'late':'mu')+'">'+fmt(x.due)+'</td><td class="table-actions">'+acts('tasks',x.id)+'</td></tr>'});
+  return modal+'<div class="card"><div class="list-heading"><h2>Daftar tugas ('+S.tasks.filter(function(x){return !x.done}).length+' belum selesai)</h2><button class="btn" onclick="addNew(\'tasks\')">＋ Tambah</button></div>'+dataTable(['Selesai','Tugas','Mata kuliah','Keterangan','Tenggat','Aksi'],rows,'Belum ada tugas.','task-table')+'</div>';
 }};
 
 function saveCourse(){
@@ -167,6 +185,6 @@ function saveCourse(){
 }
 function addAtt(){var cid=v('aC');if(!cid)return;var e=cur('att');if(e){e.cid=cid;e.st=v('aS')}else S.att.push({id:uid(),cid:cid,date:todayISO,st:v('aS')});ed={k:null,id:null};save();render()}
 function saveAttendanceDay(){document.querySelectorAll('.attendance-status').forEach(function(select){if(!select.value)return;var record=S.att.find(function(x){return x.cid===select.dataset.attCid&&x.date===todayISO});if(record)record.st=select.value;else S.att.push({id:uid(),cid:select.dataset.attCid,date:todayISO,st:select.value})});ed={k:null,id:null};save();render()}
-function addTask(){var t=v('tT');if(!t||!v('tD'))return;var e=cur('tasks');if(e){e.title=t;e.cid=v('tC');e.due=v('tD')}else S.tasks.push({id:uid(),cid:v('tC'),title:t,due:v('tD'),done:false});ed={k:null,id:null};save();render()}
+function addTask(){var t=v('tT');if(!t||!v('tD'))return;var e=cur('tasks');if(e){e.title=t;e.cid=v('tC');e.due=v('tD');e.description=v('tDesc')}else S.tasks.push({id:uid(),cid:v('tC'),title:t,due:v('tD'),description:v('tDesc'),done:false});ed={k:null,id:null};save();render()}
 function toggle(id){var t=S.tasks.find(function(x){return x.id===id});t.done=!t.done;save();render()}
 startApp();

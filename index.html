@@ -7,29 +7,35 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="wrap">
+<div class="brandbar">
+<div class="bar-inner brandbar-inner">
 <h1>🎓 Course Planner</h1>
-<p class="sub"><span id="today"></span> · <span id="sync">📱 Lokal</span></p>
-<div id="topbar" class="topbar" hidden>
-  <nav id="nav"></nav>
-  <div class="profile-area">
-    <button id="profileBtn" class="topbar-btn" type="button" aria-label="Profil" title="Profil" aria-expanded="false" aria-controls="profileMenu" onclick="toggleProfileMenu()"><span class="avatar" aria-hidden="true">P</span></button>
-    <div id="profileMenu" class="profile-menu" hidden>
-      <p id="profileName" class="profile-name">Pengguna lokal</p>
-      <p id="profileDetail" class="profile-detail">Akun tersinkron</p>
-      <p class="theme-label">Mode tampilan</p>
-      <div class="theme-options" aria-label="Mode tampilan">
-        <button type="button" data-theme-choice="light" onclick="setTheme('light')">Terang</button>
-        <button type="button" data-theme-choice="dark" onclick="setTheme('dark')">Gelap</button>
-        <button type="button" data-theme-choice="system" onclick="setTheme('system')">Sistem</button>
-      </div>
-      <div class="profile-actions">
-        <button class="menu-action" type="button" onclick="openSettings()"><span aria-hidden="true">⚙</span><span>Pengaturan</span></button>
-        <button class="menu-action" type="button" onclick="signOut()"><span aria-hidden="true">↪</span><span>Keluar</span></button>
-      </div>
+<div class="profile-area" id="profileArea" hidden>
+  <button id="profileBtn" class="topbar-btn" type="button" aria-label="Profil" title="Profil" aria-expanded="false" aria-controls="profileMenu" onclick="toggleProfileMenu()"><span class="avatar" aria-hidden="true">P</span></button>
+  <div id="profileMenu" class="profile-menu" hidden>
+    <p id="profileName" class="profile-name">Pengguna lokal</p>
+    <p id="profileDetail" class="profile-detail">Akun tersinkron</p>
+    <p class="theme-label">Mode tampilan</p>
+    <div class="theme-options" aria-label="Mode tampilan">
+      <button type="button" data-theme-choice="light" onclick="setTheme('light')">Terang</button>
+      <button type="button" data-theme-choice="dark" onclick="setTheme('dark')">Gelap</button>
+      <button type="button" data-theme-choice="system" onclick="setTheme('system')">Sistem</button>
+    </div>
+    <div class="profile-actions">
+      <button class="menu-action" type="button" onclick="openSettings()"><span aria-hidden="true">⚙</span><span>Pengaturan</span></button>
+      <button class="menu-action" type="button" onclick="signOut()"><span aria-hidden="true">↪</span><span>Keluar</span></button>
     </div>
   </div>
 </div>
+</div>
+</div>
+<div id="topbar" class="topbar" hidden>
+  <div class="bar-inner topbar-inner" id="topbarInner">
+  <nav id="nav"></nav>
+  </div>
+</div>
+<div class="wrap">
+<p class="sub"><span id="today"></span> · <span id="sync">📱 Lokal</span></p>
 <div id="view"></div>
 <div id="settingsLayer" hidden></div>
 </div>
