@@ -64,9 +64,10 @@ textarea{display:block;width:100%;min-height:88px;margin:4px 0 12px;padding:9px 
 .auth p{color:var(--mu)}
 .auth label{display:block;margin:10px 0 4px}
 .auth input{width:100%}
+.auth .btn{width:100%;height:42px}
 .auth-error{color:var(--bad)!important;min-height:1.5em}
 .btn.secondary{background:var(--bg);color:var(--pr);border:1px solid var(--bd)}
-.auth-guest{width:100%;margin-top:10px}
+.auth-guest{margin-top:10px}
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:block;margin:0;padding:0;border-bottom:1px solid var(--bar-border);border-radius:0;background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .topbar[hidden]{display:none}
 #topbar .topbar-inner{display:flex;align-items:center;gap:10px;padding-top:8px;padding-bottom:8px}
