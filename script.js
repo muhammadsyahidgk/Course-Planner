@@ -24,7 +24,7 @@ function syncProfileBar(){
 }
 window.addEventListener('scroll',syncProfileBar,{passive:true});
 window.addEventListener('resize',syncProfileBar);
-function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),profileArea=document.getElementById('profileArea'),avatar=document.querySelector('.avatar');if(topbar)topbar.hidden=!account;if(profileArea)profileArea.hidden=!account;syncProfileBar();if(name)name.textContent=account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
+function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),profileArea=document.getElementById('profileArea'),avatar=document.querySelector('.avatar'),guest=!!(account&&account.is_anonymous);if(topbar)topbar.hidden=!account;if(profileArea)profileArea.hidden=!account;syncProfileBar();if(name)name.textContent=guest?'Pengguna tamu':account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=guest?'Akses sementara':account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=guest?'T':account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
 function toggleProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn'),open=menu.hidden;menu.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');if(open)updateProfile()}
 function closeProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn');if(menu&&!menu.hidden){menu.hidden=true;button.setAttribute('aria-expanded','false')}}
 function openSettings(){closeProfileMenu();var layer=document.getElementById('settingsLayer');layer.innerHTML='<div class="modal-backdrop" onclick="if(event.target===this)closeSettings()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><div class="modal-head"><h2 id="settingsTitle">Pengaturan</h2><button class="x" type="button" aria-label="Tutup pengaturan" onclick="closeSettings()">✕</button></div><div class="settings-section"><h3>Tampilan</h3><p class="theme-label">Pilih mode warna</p><div class="theme-options" aria-label="Mode tampilan"><button type="button" data-theme-choice="light" onclick="setTheme(\'light\')">Terang</button><button type="button" data-theme-choice="dark" onclick="setTheme(\'dark\')">Gelap</button><button type="button" data-theme-choice="system" onclick="setTheme(\'system\')">Sistem</button></div></div><div class="settings-section"><h3>Penyimpanan</h3><p>'+(account?'Data tersimpan dan disinkronkan dengan akun.':'Data tersimpan di browser ini.')+'</p></div></section></div>';layer.hidden=false;syncThemeButtons()}
@@ -33,7 +33,7 @@ document.addEventListener('click',function(event){if(!event.target.closest('.pro
 function renderAuth(message){
   document.getElementById('nav').innerHTML='';
   updateProfile();
-  document.getElementById('view').innerHTML='<div class="card auth"><h2>Masuk</h2><p>Gunakan akun yang diberikan oleh admin planner.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Kata sandi</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Mohon tunggu...':'Masuk')+'</button></form></div>';
+  document.getElementById('view').innerHTML='<div class="card auth"><h2>Masuk</h2><p>Gunakan akun yang diberikan oleh administrator perencana kuliah.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Alamat surel</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Kata sandi</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Mohon tunggu...':'Masuk')+'</button></form><button class="btn secondary auth-guest" type="button" onclick="submitGuest()" '+(authBusy?'disabled':'')+'>'+(authBusy?'Mohon tunggu...':'Lanjutkan sebagai tamu')+'</button></div>';
 }
 function submitAuth(event){
   event.preventDefault();if(!supabaseClient)return;
@@ -41,7 +41,12 @@ function submitAuth(event){
   authBusy=true;renderAuth();
   supabaseClient.auth.signInWithPassword({email:email,password:password}).then(function(result){if(result.error)throw result.error;authBusy=false;}).catch(function(error){authBusy=false;renderAuth(authError(error))});
 }
-function authError(e){var m=(e&&e.message)||'';if(/invalid login/i.test(m))return 'Email atau kata sandi salah.';if(/email not confirmed/i.test(m))return 'Email belum dikonfirmasi.';if(/rate limit|too many/i.test(m))return 'Terlalu banyak percobaan. Coba lagi nanti.';if(/network|fetch/i.test(m))return 'Tidak ada koneksi internet.';return m||'Gagal masuk.'}
+function authError(e){var m=(e&&e.message)||'';if(/invalid login|invalid.*credentials/i.test(m))return 'Alamat surel atau kata sandi salah.';if(/email not confirmed/i.test(m))return 'Alamat surel belum dikonfirmasi.';if(/anonymous|anonymous_provider_disabled/i.test(m))return 'Mode tamu belum diaktifkan di pengaturan autentikasi Supabase.';if(/rate limit|too many/i.test(m))return 'Terlalu banyak percobaan. Coba lagi nanti.';if(/network|fetch/i.test(m))return 'Tidak ada koneksi internet.';if(/signup|sign.?up|not allowed/i.test(m))return 'Pendaftaran akun tidak diizinkan. Hubungi administrator.';return 'Terjadi kesalahan saat masuk. Silakan coba lagi.'}
+function submitGuest(){
+  if(!supabaseClient||authBusy)return;
+  authBusy=true;renderAuth();
+  supabaseClient.auth.signInAnonymously().then(function(result){if(result.error)throw result.error;authBusy=false;useSession(result.data.session)}).catch(function(error){authBusy=false;renderAuth(authError(error))});
+}
 function signOut(){closeProfileMenu();if(supabaseClient)supabaseClient.auth.signOut()}
 function useSession(session){
   var next=session&&session.user;
@@ -125,7 +130,7 @@ function dataTable(headers,rows,empty,className){return '<div class="table-wrap"
 function scheds(cid){return S.schedule.filter(function(x){return x.cid===cid}).sort(function(a,b){return a.day-b.day||a.s.localeCompare(b.s)})}
 function attendanceCourses(date,selected){var weekday=(new Date(date+'T00:00').getDay()+6)%7,courses=S.courses.filter(function(c){return S.schedule.some(function(x){return x.cid===c.id&&x.day===weekday})});if(selected&&!courses.some(function(c){return c.id===selected})){var current=S.courses.find(function(c){return c.id===selected});if(current)courses.push(current)}return courses}
 function attendanceOpts(date,selected){return attendanceCourses(date,selected).map(function(c){return '<option value="'+c.id+'"'+(c.id===selected?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')}
-function attendanceStatusOptions(selected){return '<option value="">— pilih status —</option>'+['Hadir','Izin','Sakit','Alpha','Tidak ada'].map(function(status){return '<option value="'+status+'"'+(selected===status?' selected':'')+'>'+status+'</option>'}).join('')}
+function attendanceStatusOptions(selected){return '<option value="">— pilih status —</option>'+['Hadir','Izin','Sakit','Alpha','Tidak ada'].map(function(status){return '<option value="'+status+'"'+(selected===status?' selected':'')+'>'+(status==='Alpha'?'Alpa':status)+'</option>'}).join('')}
 function showSecondSchedule(){var fields=document.getElementById('secondScheduleFields'),button=document.getElementById('addSecondSchedule');if(fields)fields.hidden=false;if(button)button.hidden=true}
 
 var VIEWS={
@@ -165,7 +170,7 @@ att:function(){
   var rec=S.courses.map(function(c){var a=S.att.filter(function(x){return x.cid===c.id&&x.st!=='Tidak ada'}),p=pct(c.id);return '<tr><td>'+esc(c.name)+'</td><td>'+a.length+'</td><td><span class="mu">'+(p===null?'-':p+'%')+'</span><div class="bar"><i style="width:'+(p||0)+'%"></i></div></td></tr>'});
   var attendanceByDate={};S.att.forEach(function(x){if(!attendanceByDate[x.date])attendanceByDate[x.date]=[];attendanceByDate[x.date].push(x)});
   var attendanceDates=Object.keys(attendanceByDate).sort(function(a,b){return b.localeCompare(a)}).slice(0,30),historyRows=[];
-  attendanceDates.forEach(function(date){var day=new Date(date+'T00:00'),weekday=DAYS[(day.getDay()+6)%7];attendanceByDate[date].forEach(function(x){return historyRows.push('<tr><td>'+weekday+', '+fmt(date)+'</td><td>'+cn(x.cid)+'</td><td><span class="tag '+(x.st==='Tidak ada'?'no-class':x.st)+'">'+esc(x.st)+'</span></td><td class="table-actions">'+acts('att',x.id)+'</td></tr>')})});
+  attendanceDates.forEach(function(date){var day=new Date(date+'T00:00'),weekday=DAYS[(day.getDay()+6)%7];attendanceByDate[date].forEach(function(x){return historyRows.push('<tr><td>'+weekday+', '+fmt(date)+'</td><td>'+cn(x.cid)+'</td><td><span class="tag '+(x.st==='Tidak ada'?'no-class':x.st)+'">'+(x.st==='Alpha'?'Alpa':esc(x.st))+'</span></td><td class="table-actions">'+acts('att',x.id)+'</td></tr>')})});
   return modal+'<div class="card"><div class="list-heading"><h2>Rekap</h2><button class="btn" onclick="addNew(\'att\')">＋ Catat kehadiran</button></div>'+dataTable(['Mata kuliah','Pertemuan','Kehadiran'],rec,'Belum ada mata kuliah.')+'</div><div class="card"><h2>Riwayat terbaru</h2>'+dataTable(['Tanggal','Mata kuliah','Status','Aksi'],historyRows,'Belum ada catatan.')+'</div>';
 },
 tasks:function(){
