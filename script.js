@@ -24,7 +24,7 @@ function syncProfileBar(){
 }
 window.addEventListener('scroll',syncProfileBar,{passive:true});
 window.addEventListener('resize',syncProfileBar);
-function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),profileArea=document.getElementById('profileArea'),avatar=document.querySelector('.avatar');if(topbar)topbar.hidden=!account;if(profileArea)profileArea.hidden=!account;syncProfileBar();if(name)name.textContent=account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
+function updateProfile(){var name=document.getElementById('profileName'),detail=document.getElementById('profileDetail'),topbar=document.getElementById('topbar'),profileArea=document.getElementById('profileArea'),avatar=document.querySelector('.avatar'),guest=!!(account&&account.is_anonymous);if(topbar)topbar.hidden=!account;if(profileArea)profileArea.hidden=!account;syncProfileBar();if(name)name.textContent=guest?'Pengguna tamu':account&&account.email?account.email:'Pengguna lokal';if(detail)detail.textContent=guest?'Akses sementara':account?'Akun tersinkron':'Mode penyimpanan lokal';if(avatar)avatar.textContent=guest?'T':account&&account.email?account.email.charAt(0).toUpperCase():'P';syncThemeButtons()}
 function toggleProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn'),open=menu.hidden;menu.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');if(open)updateProfile()}
 function closeProfileMenu(){var menu=document.getElementById('profileMenu'),button=document.getElementById('profileBtn');if(menu&&!menu.hidden){menu.hidden=true;button.setAttribute('aria-expanded','false')}}
 function openSettings(){closeProfileMenu();var layer=document.getElementById('settingsLayer');layer.innerHTML='<div class="modal-backdrop" onclick="if(event.target===this)closeSettings()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><div class="modal-head"><h2 id="settingsTitle">Pengaturan</h2><button class="x" type="button" aria-label="Tutup pengaturan" onclick="closeSettings()">✕</button></div><div class="settings-section"><h3>Tampilan</h3><p class="theme-label">Pilih mode warna</p><div class="theme-options" aria-label="Mode tampilan"><button type="button" data-theme-choice="light" onclick="setTheme(\'light\')">Terang</button><button type="button" data-theme-choice="dark" onclick="setTheme(\'dark\')">Gelap</button><button type="button" data-theme-choice="system" onclick="setTheme(\'system\')">Sistem</button></div></div><div class="settings-section"><h3>Penyimpanan</h3><p>'+(account?'Data tersimpan dan disinkronkan dengan akun.':'Data tersimpan di browser ini.')+'</p></div></section></div>';layer.hidden=false;syncThemeButtons()}
@@ -33,13 +33,18 @@ document.addEventListener('click',function(event){if(!event.target.closest('.pro
 function renderAuth(message){
   document.getElementById('nav').innerHTML='';
   updateProfile();
-  document.getElementById('view').innerHTML='<div class="card auth"><h2>Sign in</h2><p>Use the account provided by the planner administrator.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':'Sign in')+'</button></form></div>';
+  document.getElementById('view').innerHTML='<div class="card auth"><h2>Sign in</h2><p>Use the account provided by the planner administrator.</p><form onsubmit="submitAuth(event)"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p class="auth-error">'+(message?esc(message):'')+'</p><button class="btn" type="submit" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':'Sign in')+'</button></form><button class="btn secondary auth-guest" type="button" onclick="submitGuest()" '+(authBusy?'disabled':'')+'>'+(authBusy?'Please wait...':'Continue as guest')+'</button></div>';
 }
 function submitAuth(event){
   event.preventDefault();if(!supabaseClient)return;
   var email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
   authBusy=true;renderAuth();
   supabaseClient.auth.signInWithPassword({email:email,password:password}).then(function(result){if(result.error)throw result.error;authBusy=false;}).catch(function(error){authBusy=false;renderAuth(error.message||'Unable to sign in.')});
+}
+function submitGuest(){
+  if(!supabaseClient||authBusy)return;
+  authBusy=true;renderAuth();
+  supabaseClient.auth.signInAnonymously().then(function(result){if(result.error)throw result.error;authBusy=false;useSession(result.data.session)}).catch(function(error){authBusy=false;renderAuth(error.message||'Unable to start a guest session.')});
 }
 function signOut(){closeProfileMenu();if(supabaseClient)supabaseClient.auth.signOut()}
 function useSession(session){
