@@ -102,6 +102,7 @@ function backfillAttendance(){
   return changed;
 }
 function fmt(d){return new Date(d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}
+function fmtRange(start,end){return esc(start)+' - '+esc(end)}
 function opts(sel){return S.courses.map(function(c){return '<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')}
 function courseNameOptions(current){var names=COURSE_NAMES.filter(function(name){return !S.courses.some(function(course){return course.name===name&&(!current||course.id!==current.id)})||current&&current.name===name}),options=names.map(function(name){return '<option value="'+esc(name)+'"'+(current&&current.name===name?' selected':'')+'>'+esc(name)+'</option>'});if(current&&COURSE_NAMES.indexOf(current.name)<0)options.unshift('<option value="'+esc(current.name)+'" selected>'+esc(current.name)+' (data lama)</option>');return '<option value="" disabled'+(current?'':' selected')+'>— pilih mata kuliah —</option>'+options.join('')}
 var todayIdx=(new Date().getDay()+6)%7,todayISO=iso(new Date());
@@ -109,6 +110,7 @@ document.getElementById('today').textContent=new Date().toLocaleDateString('id-I
 
 var TABS={dash:'Beranda',schedule:'Jadwal',tasks:'Tugas',att:'Absensi',courses:'Mata Kuliah'};
 var ed={k:null,id:null};
+var pendingDelete=null;
 function toggleNavMenu(){var nav=document.getElementById('nav'),button=document.getElementById('navToggle'),open=nav.classList.toggle('menu-open');button.setAttribute('aria-expanded',open?'true':'false');button.setAttribute('aria-label',open?'Tutup menu navigasi':'Buka menu navigasi')}
 function closeNavMenu(){var nav=document.getElementById('nav'),button=document.getElementById('navToggle');if(nav)nav.classList.remove('menu-open');if(button){button.setAttribute('aria-expanded','false');button.setAttribute('aria-label','Buka menu navigasi')}}
 function go(t){closeNavMenu();tab=t;ed={k:null,id:null};render()}
@@ -116,7 +118,7 @@ function edit(k,id){ed={k:k,id:id};render()}
 function addNew(k){ed={k:k,id:null};render()}
 function cancel(){ed={k:null,id:null};render()}
 function modalDialog(title,content){return '<div class="modal-backdrop" onclick="if(event.target===this)cancel()"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><h2 id="modalTitle">'+title+'</h2><button class="x" type="button" aria-label="Tutup" onclick="cancel()">✕</button></div>'+content+'</section></div>'}
-document.addEventListener('keydown',function(event){if(event.key==='Escape'){if(ed.k==='courses'||ed.k==='tasks'||ed.k==='att')cancel();closeNavMenu();closeProfileMenu();closeSettings()}});
+document.addEventListener('keydown',function(event){if(event.key==='Escape'){if(pendingDelete)cancelDelete();else if(ed.k==='courses'||ed.k==='tasks'||ed.k==='att')cancel();closeNavMenu();closeProfileMenu();closeSettings()}});
 function cur(k){return ed.k===k?S[k].find(function(x){return x.id===ed.id}):null}
 function render(){
   document.getElementById('nav').innerHTML='<button id="navToggle" class="nav-toggle" type="button" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="navLinks" onclick="toggleNavMenu()"><span></span><span></span><span></span></button><div id="navLinks" class="nav-links">'+Object.keys(TABS).map(function(k){return '<button class="'+(k===tab?'on':'')+'" aria-current="'+(k===tab?'page':'false')+'" onclick="go(\''+k+'\')">'+TABS[k]+'</button>'}).join('')+'</div>';
@@ -124,7 +126,27 @@ function render(){
   updateProfile();
 }
 function needCourse(){var isTasks=tab==='tasks';return S.courses.length?'':'<div class="card"><h2>'+(isTasks?'Daftar tugas':'Kehadiran')+'</h2>'+dataTable(isTasks?['Selesai','Tugas','Mata kuliah','Keterangan','Tenggat','Aksi']:['Mata kuliah','Pertemuan','Kehadiran'],[],'Tambahkan mata kuliah dulu di tab “Mata Kuliah”.',isTasks?'task-table':'')+'</div>'}
-function del(key,id){if(!confirm('Hapus data ini?'))return;S[key]=S[key].filter(function(x){return x.id!==id});if(key==='courses'){['schedule','att','tasks'].forEach(function(k){S[k]=S[k].filter(function(x){return x.cid!==id})})}if(ed.id===id)ed={k:null,id:null};save();render()}
+function del(key,id){
+  var item=S[key].find(function(x){return x.id===id});
+  if(!item)return;
+  pendingDelete={key:key,id:id};
+  var label=key==='courses'?item.name:key==='tasks'?item.title:cn(item.cid)+' · '+fmt(item.date);
+  var related=key==='courses'?'<p class="delete-warning">Jadwal, absensi, dan tugas yang terkait dengan mata kuliah ini juga akan dihapus.</p>':'';
+  var layer=document.getElementById('settingsLayer');
+  layer.innerHTML='<div class="modal-backdrop" onclick="if(event.target===this)cancelDelete()"><section class="modal delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="deleteTitle" aria-describedby="deleteDescription"><div class="modal-head"><h2 id="deleteTitle">Konfirmasi hapus</h2><button class="x" type="button" aria-label="Tutup konfirmasi" onclick="cancelDelete()">✕</button></div><p id="deleteDescription">Yakin ingin menghapus <strong>'+esc(label)+'</strong>?</p>'+related+'<div class="delete-actions"><button class="btn secondary" type="button" onclick="cancelDelete()">Batal</button><button class="btn btn-danger" type="button" onclick="confirmDelete()">Hapus</button></div></section></div>';
+  layer.hidden=false;
+}
+function cancelDelete(){pendingDelete=null;var layer=document.getElementById('settingsLayer');if(layer){layer.hidden=true;layer.innerHTML=''}}
+function confirmDelete(){
+  if(!pendingDelete)return;
+  var key=pendingDelete.key,id=pendingDelete.id;
+  pendingDelete=null;
+  var layer=document.getElementById('settingsLayer');if(layer){layer.hidden=true;layer.innerHTML=''}
+  S[key]=S[key].filter(function(x){return x.id!==id});
+  if(key==='courses'){['schedule','att','tasks'].forEach(function(k){S[k]=S[k].filter(function(x){return x.cid!==id})})}
+  if(ed.id===id)ed={k:null,id:null};
+  save();render();
+}
 function pct(cid){var a=S.att.filter(function(x){return x.cid===cid&&x.st!=='Tidak ada'});if(!a.length)return null;return Math.round(a.filter(function(x){return x.st==='Hadir'}).length/a.length*100)}
 function acts(k,id){return '<button class="x" style="color:var(--pr)" title="Edit" onclick="edit(\''+k+'\',\''+id+'\')">✎</button><button class="x" title="Hapus" onclick="del(\''+k+'\',\''+id+'\')">✕</button>'}
 function btns(e,fn,label){return '<button class="btn" onclick="'+fn+'()">'+(e?'Simpan perubahan':label)+'</button>'+(e?' <button class="btn" style="background:var(--mu)" onclick="cancel()">Batal</button>':'')}
@@ -137,9 +159,14 @@ function showSecondSchedule(){var fields=document.getElementById('secondSchedule
 
 var VIEWS={
 dash:function(){
-  var ts=S.schedule.filter(function(x){return x.day===todayIdx}).sort(function(a,b){return a.s.localeCompare(b.s)});
+  var now=new Date(),currentDay=(now.getDay()+6)%7,currentMinutes=now.getHours()*60+now.getMinutes(),upcoming=S.schedule.map(function(slot){
+    var start=slot.s.split(':'),startMinutes=(+start[0])*60+(+start[1]),daysUntil=(slot.day-currentDay+7)%7;
+    if(daysUntil===0&&startMinutes<=currentMinutes)daysUntil=7;
+    var date=new Date(now);date.setHours(0,0,0,0);date.setDate(date.getDate()+daysUntil);
+    return {slot:slot,date:date};
+  }).sort(function(a,b){return a.date-b.date||a.slot.s.localeCompare(b.slot.s)}).slice(0,3);
   var tk=S.tasks.filter(function(x){return !x.done}).sort(function(a,b){return a.due.localeCompare(b.due)}).slice(0,5);
-  return '<div class="grid"><div class="card"><h2>Kuliah hari ini</h2>'+(ts.length?ts.map(function(x){return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b><div class="mu">'+x.s+'–'+x.e+(x.room?' · '+esc(x.room):'')+'</div></div></div>'}).join(''):'<div class="empty">Tidak ada jadwal hari ini.</div>')+'</div>'+
+  return '<div class="grid"><div class="card"><h2>3 mata kuliah terdekat</h2>'+(upcoming.length?upcoming.map(function(item){var x=item.slot;return '<div class="item"><div class="grow"><b>'+cn(x.cid)+'</b><div class="mu">'+item.date.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'})+' · '+fmtRange(x.s,x.e)+(x.room?' · '+esc(x.room):'')+'</div></div></div>'}).join(''):'<div class="empty">Belum ada jadwal kuliah.</div>')+'</div>'+
   '<div class="card"><h2>Tugas terdekat</h2>'+(tk.length?tk.map(function(x){return '<div class="item"><div class="grow"><b>'+esc(x.title)+'</b><div class="mu">'+cn(x.cid)+'</div></div><span class="'+(x.due<todayISO?'late':'mu')+'">'+fmt(x.due)+'</span></div>'}).join(''):'<div class="empty">Tidak ada tugas tertunda 🎉</div>')+'</div>'+
   '<div class="card"><h2>Kehadiran</h2>'+(S.courses.length?S.courses.map(function(c){var p=pct(c.id);return '<div style="margin-bottom:8px"><div class="mu">'+esc(c.name)+' — '+(p===null?'belum ada data':p+'%')+'</div><div class="bar"><i style="width:'+(p||0)+'%"></i></div></div>'}).join(''):'<div class="empty">Belum ada mata kuliah.</div>')+'</div></div>';
 },
@@ -149,17 +176,17 @@ courses:function(){
   var f='<div class="row"><select id="cName" aria-label="Pilih mata kuliah" required onchange="this.setCustomValidity(\'\')">'+courseNameOptions(e)+'</select><input id="cLec" placeholder="Dosen" value="'+(e?esc(e.lec||''):'')+'"><input id="cSks" type="number" min="1" max="6" placeholder="SKS" value="'+(e?esc(e.sks||''):'')+'"></div>'+
   scheduleFields(0,'Waktu kelas 1')+'<div id="secondScheduleFields"'+(sc.length>1?'':' hidden')+'>'+scheduleFields(1,'Waktu kelas 2')+'</div>'+(sc.length>1?'':'<button id="addSecondSchedule" class="btn secondary" type="button" onclick="showSecondSchedule()">＋ Tambah waktu kelas ke-2</button>')+btns(e,'saveCourse','Tambah');
   var modal=ed.k==='courses'?modalDialog(e?'Edit mata kuliah':'Tambah mata kuliah',f):'';
-  var rows=S.courses.map(function(c){var slots=scheds(c.id),schedule=slots.length?slots.map(function(slot){return DAYS[slot.day]+', '+esc(slot.s)+' – '+esc(slot.e)+(slot.room?' · '+esc(slot.room):'')}).join('<br>'):'Belum ada jadwal';return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.lec||'-')+'</td><td>'+esc(c.sks||'-')+'</td><td>'+schedule+'</td><td class="table-actions">'+acts('courses',c.id)+'</td></tr>'});
+  var rows=S.courses.map(function(c){var slots=scheds(c.id),schedule=slots.length?slots.map(function(slot){return DAYS[slot.day]+', '+fmtRange(slot.s,slot.e)+(slot.room?' · '+esc(slot.room):'')}).join('<br>'):'Belum ada jadwal';return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.lec||'-')+'</td><td>'+esc(c.sks||'-')+'</td><td>'+schedule+'</td><td class="table-actions">'+acts('courses',c.id)+'</td></tr>'});
   return modal+'<div class="card"><div class="list-heading"><h2>Daftar ('+S.courses.length+' MK, '+S.courses.reduce(function(a,c){return a+(+c.sks||0)},0)+' SKS)</h2><button class="btn" onclick="addNew(\'courses\')">＋ Tambah</button></div>'+dataTable(['Mata kuliah','Dosen','SKS','Jadwal','Aksi'],rows,'Belum ada mata kuliah.')+'</div>';
 },
 schedule:function(){
-  var rows=S.schedule.slice().sort(function(a,b){return a.day-b.day||a.s.localeCompare(b.s)}).map(function(x){var c=S.courses.find(function(y){return y.id===x.cid});return '<tr><td>'+DAYS[x.day]+(x.day===todayIdx?' <span class="tag">hari ini</span>':'')+'</td><td>'+cn(x.cid)+'</td><td>'+esc(x.s)+'–'+esc(x.e)+'</td><td>'+esc(x.room||'-')+'</td><td>'+esc(c&&c.lec||'-')+'</td></tr>'});
-  return '<div class="card"><h2>Jadwal kuliah</h2>'+dataTable(['Hari','Mata kuliah','Waktu','Ruang','Dosen'],rows,'Belum ada jadwal.')+'</div>';
+  var rows=S.schedule.slice().sort(function(a,b){return a.day-b.day||a.s.localeCompare(b.s)}).map(function(x){var c=S.courses.find(function(y){return y.id===x.cid});return '<tr><td>'+DAYS[x.day]+(x.day===todayIdx?' <span class="tag">hari ini</span>':'')+'</td><td>'+cn(x.cid)+'</td><td>'+fmtRange(x.s,x.e)+'</td><td>'+esc(x.room||'-')+'</td><td>'+esc(c&&c.lec||'-')+'</td></tr>'});
+  return '<div class="card"><div class="list-heading"><h2>Jadwal kuliah</h2><button class="btn heading-spacer" type="button" disabled aria-hidden="true" tabindex="-1">＋ Tambah</button></div>'+dataTable(['Hari','Mata kuliah','Waktu','Ruang','Dosen'],rows,'Belum ada jadwal.')+'</div>';
 },
 att:function(){
   if(!S.courses.length)return needCourse();
   var e=cur('att'),date=e?e.date:todayISO,choices=attendanceCourses(date,e&&e.cid);
-  var dailyChoices=attendanceCourses(todayISO),dailyRows=dailyChoices.map(function(c){var meetings=S.schedule.filter(function(x){return x.cid===c.id&&x.day===todayIdx}).sort(function(a,b){return a.s.localeCompare(b.s)}),record=S.att.find(function(x){return x.cid===c.id&&x.date===todayISO}),times=meetings.map(function(x){return esc(x.s)+' – '+esc(x.e)+(x.room?' · '+esc(x.room):'')}).join(', ');return '<tr><td>'+esc(c.name)+'</td><td>'+times+'</td><td><select class="attendance-status" data-att-cid="'+esc(c.id)+'">'+attendanceStatusOptions(record&&record.st)+'</select></td></tr>'});
+  var dailyChoices=attendanceCourses(todayISO),dailyRows=dailyChoices.map(function(c){var meetings=S.schedule.filter(function(x){return x.cid===c.id&&x.day===todayIdx}).sort(function(a,b){return a.s.localeCompare(b.s)}),record=S.att.find(function(x){return x.cid===c.id&&x.date===todayISO}),times=meetings.map(function(x){return fmtRange(x.s,x.e)+(x.room?' · '+esc(x.room):'')}).join(', ');return '<tr><td>'+esc(c.name)+'</td><td>'+times+'</td><td><select class="attendance-status" data-att-cid="'+esc(c.id)+'">'+attendanceStatusOptions(record&&record.st)+'</select></td></tr>'});
   var daily='<div class="mu" style="margin-bottom:8px">Tanggal otomatis: '+fmt(todayISO)+'</div>'+dataTable(['Mata kuliah','Waktu','Status'],dailyRows,'Tidak ada mata kuliah terjadwal hari ini.')+'<button class="btn" onclick="saveAttendanceDay()" '+(dailyChoices.length?'':'disabled')+'>Simpan kehadiran</button>';
   var f;
   if(e){
@@ -180,7 +207,7 @@ tasks:function(){
   var e=cur('tasks');
   var f='<div class="row"><input id="tT" placeholder="Judul tugas" value="'+(e?esc(e.title):'')+'"><select id="tC">'+opts(e&&e.cid)+'</select><input id="tD" type="date" value="'+(e?e.due:todayISO)+'"></div><label for="tDesc">Keterangan / detail tugas</label><textarea id="tDesc" placeholder="Tambahkan detail tugas">'+(e?esc(e.description||''):'')+'</textarea>'+btns(e,'addTask','Tambah');
   var modal=ed.k==='tasks'?modalDialog(e?'Edit tugas':'Tambah tugas',f):'';
-  var l=S.tasks.slice().sort(function(a,b){return (a.done-b.done)||a.due.localeCompare(b.due)});
+  var l=S.tasks.slice().sort(function(a,b){return (a.done-b.done)||b.due.localeCompare(a.due)});
   var rows=l.map(function(x){return '<tr class="'+(x.done?'done':'')+'"><td><input class="task-checkbox" type="checkbox" aria-label="Tandai selesai: '+esc(x.title)+'" '+(x.done?'checked':'')+' onchange="toggle(\''+x.id+'\')"></td><td><span class="task-title">'+esc(x.title)+'</span></td><td>'+cn(x.cid)+'</td><td class="task-description">'+esc(x.description||'-')+'</td><td class="'+(!x.done&&x.due<todayISO?'late':'mu')+'">'+fmt(x.due)+'</td><td class="table-actions">'+acts('tasks',x.id)+'</td></tr>'});
   return modal+'<div class="card"><div class="list-heading"><h2>Daftar tugas ('+S.tasks.filter(function(x){return !x.done}).length+' belum selesai)</h2><button class="btn" onclick="addNew(\'tasks\')">＋ Tambah</button></div>'+dataTable(['Selesai','Tugas','Mata kuliah','Keterangan','Tenggat','Aksi'],rows,'Belum ada tugas.','task-table')+'</div>';
 }};
