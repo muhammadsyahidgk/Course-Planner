@@ -35,7 +35,15 @@ create policy "akses data sendiri" on planner_state
 
 3. Buat akun di **Autentikasi → Pengguna** (aplikasi ini tidak menyediakan halaman pendaftaran).
 4. Isi `SUPABASE_URL` dan `SUPABASE_ANON_KEY` (kunci publik) di bagian atas `script.js`.
-5. Terbitkan folder ini sebagai situs statis, atau buka `index.html` di peramban.
+5. Terbitkan folder ini sebagai situs statis.
+
+## Pasang di ponsel
+
+Aplikasi mendukung pemasangan sebagai PWA. Situs harus dibuka melalui HTTPS (misalnya GitHub Pages); membuka `index.html` langsung dari komputer (`file://`) tidak mendukung pemasangan.
+
+Untuk menerbitkan melalui GitHub Pages, buka **Settings → Pages**, pilih **Deploy from a branch**, pilih branch utama dan folder `/ (root)`, lalu simpan. Setelah situs terbit, buka alamat Pages tersebut di Chrome Android. Pilih **⋮ → Instal aplikasi** atau **Tambahkan ke layar utama → Instal**. Di iPhone/iPad, buka dengan Safari lalu pilih **Bagikan → Tambahkan ke Layar Utama**.
+
+Shell aplikasi dan berkas inti disimpan untuk akses offline setelah kunjungan pertama. Sinkronisasi akun Supabase tetap memerlukan internet.
 
 > RLS wajib aktif. Kunci publik memang dapat dilihat siapa saja, jadi kebijakan RLS-lah yang melindungi data setiap pengguna.
 

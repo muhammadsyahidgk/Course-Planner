@@ -228,3 +228,8 @@ function saveAttendanceDay(){document.querySelectorAll('.attendance-status').for
 function addTask(){var t=v('tT');if(!t||!v('tD'))return;var e=cur('tasks');if(e){e.title=t;e.cid=v('tC');e.due=v('tD');e.description=v('tDesc')}else S.tasks.push({id:uid(),cid:v('tC'),title:t,due:v('tD'),description:v('tDesc'),done:false});ed={k:null,id:null};save();render()}
 function toggle(id){var t=S.tasks.find(function(x){return x.id===id});t.done=!t.done;save();render()}
 startApp();
+if('serviceWorker' in navigator&&window.isSecureContext){
+  navigator.serviceWorker.register('./service-worker.js').catch(function(error){
+    console.error('Service worker Course Planner gagal didaftarkan.',error);
+  });
+}
