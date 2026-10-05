@@ -43,6 +43,12 @@ create table if not exists programs (
   name text not null
 );
 
+alter table programs enable row level security;
+grant select on programs to authenticated;
+drop policy if exists "peserta membaca katalog prodi" on programs;
+create policy "peserta membaca katalog prodi" on programs
+  for select to authenticated using (true);
+
 insert into programs (id, name)
 values ('ti-pagi', 'Teknik Informatika Pagi')
 on conflict (id) do update set name = excluded.name;
@@ -233,3 +239,18 @@ Shell aplikasi dan berkas inti disimpan untuk akses offline setelah kunjungan pe
 - Centang selesai pada tugas disimpan per akun di tabel `program_task_progress`, terpisah dari data pribadi perencana kuliah.
 - Jadwal prodi lama dikonversi menjadi mata kuliah bersama saat admin prodi membuka aplikasi setelah pembaruan skema.
 - Untuk setiap mata kuliah prodi, riwayat absensi pribadi diisi otomatis "Hadir" sejak 7 Sep 2026 sampai hari ini saat pertama kali dibuka; peserta dapat mengubah status tiap catatan melalui tombol ✎. "Catat kehadiran" berada di samping judul rekap dan mencatat satu mata kuliah untuk hari ini.
+
+### Perbaikan pilihan prodi gagal disimpan
+Jika SQL untuk mendaftarkan prodi sudah sukses tetapi aplikasi tetap tidak menemukan prodi, akun peserta kemungkinan belum memiliki izin membaca katalog `programs`. Jalankan seluruh SQL berikut di Supabase SQL Editor pada proyek yang sama dengan aplikasi, lalu muat ulang dan pilih prodi lagi:
+
+```sql
+alter table public.programs enable row level security;
+grant select on public.programs to authenticated;
+drop policy if exists "peserta membaca katalog prodi" on public.programs;
+create policy "peserta membaca katalog prodi" on public.programs
+  for select to authenticated using (true);
+
+insert into public.programs (id, name)
+values ('ti-pagi', 'Teknik Informatika Pagi')
+on conflict (id) do update set name = excluded.name;
+```

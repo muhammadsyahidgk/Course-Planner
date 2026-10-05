@@ -1,4 +1,4 @@
-var CACHE_NAME='course-planner-v11';
+var CACHE_NAME='course-planner-v15';
 var APP_FILES=[
   'index.html',
   'style.css',

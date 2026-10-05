@@ -1,6 +1,6 @@
 (function(){
   var PROGRAMS=[{id:'ti-pagi',name:'Teknik Informatika Pagi'}];
-  var state={status:'idle',accountId:null,membership:null,entries:[],progress:{},participants:[],participantsLoaded:false,participantsLoading:false,importing:false,error:'',channel:null,editor:null};
+  var state={status:'idle',accountId:null,membership:null,pendingProgramId:'',entries:[],progress:{},participants:[],participantsLoaded:false,participantsLoading:false,importing:false,error:'',progressError:'',channel:null,editor:null};
   var baseRender=window.render;
   var baseRenderAuth=window.renderAuth;
   var baseCourseName=window.cn;
@@ -29,14 +29,10 @@
       select.innerHTML='<option value="">Masuk dengan akun untuk memilih prodi</option>';
       return;
     }
-    if(state.error&&state.status==='error'){
-      select.innerHTML='<option value="">Program studi tidak tersedia</option>';
-      return;
-    }
     select.innerHTML='<option value="">— Pilih program studi —</option>'+PROGRAMS.map(function(program){
       return '<option value="'+program.id+'"'+(state.membership&&state.membership.program_id===program.id?' selected':'')+'>'+program.name+'</option>';
     }).join('');
-    select.value=state.membership?state.membership.program_id:'';
+    select.value=state.membership?state.membership.program_id:state.pendingProgramId;
   }
 
   function clearRealtime(){
@@ -55,8 +51,15 @@
     if(result.error)throw result.error;
     state.entries=result.data||[];
     state.error='';
-    await fetchProgress();
     syncCourseMirror();
+    try{
+      await fetchProgress();
+      state.progressError='';
+    }catch(error){
+      state.progress={};
+      state.progressError='Status tugas gagal dimuat. Pastikan tabel program_task_progress dan kebijakan SQL sudah dipasang.';
+      console.error('Gagal memuat status tugas pribadi.',error);
+    }
   }
 
   async function fetchProgress(){
@@ -169,6 +172,7 @@
       if(memberResult.error)throw memberResult.error;
       if(!window.account||window.account.id!==userId)return;
       state.membership=memberResult.data;
+      state.pendingProgramId='';
       if(state.membership){
         await fetchEntries();
         await migrateLegacySchedules();
@@ -191,6 +195,7 @@
     if(state.membership&&state.membership.role==='admin')return;
     var program=PROGRAMS.find(function(item){return item.id===programId});
     if(!program){refreshProfileSelect();return}
+    state.pendingProgramId=program.id;
     state.status='loading';
     state.error='';
     state.accountId=window.account.id;
@@ -199,6 +204,16 @@
     var user=window.account;
     var displayName=user.user_metadata&&user.user_metadata.full_name||user.email||'Peserta';
     try{
+      var programResult=await window.supabaseClient.from('programs')
+        .select('id')
+        .eq('id',program.id)
+        .maybeSingle();
+      if(programResult.error)throw programResult.error;
+      if(!programResult.data){
+        var missingProgramError=new Error('Program studi belum terdaftar di database Supabase.');
+        missingProgramError.code='PROGRAM_NOT_SEEDED';
+        throw missingProgramError;
+      }
       var result=await window.supabaseClient.from('program_members').upsert({
         user_id:user.id,
         program_id:program.id,
@@ -208,7 +223,9 @@
       if(result.error)throw result.error;
     }catch(error){
       state.status='error';
-      state.error='Pilihan prodi gagal disimpan. Coba lagi atau hubungi administrator.';
+      state.error=error&&error.code==='PROGRAM_NOT_SEEDED'
+        ?'Prodi tidak terlihat oleh akun aplikasi. Pastikan katalog programs dapat dibaca peserta; jalankan SQL perbaikan di README, lalu pilih prodi lagi.'
+        :'Pilihan prodi gagal disimpan. Periksa kebijakan RLS untuk program_members dan coba lagi.';
       console.error('Gagal menyimpan pilihan program studi.',error);
       render();
       refreshProfileSelect();
@@ -228,6 +245,7 @@
     if(state.status==='loading')return '<div class="program-notice">Memuat data program studi...</div>';
     if(state.error)return '<div class="program-notice">'+window.esc(state.error)+'</div>';
     if(state.status==='error')return '<div class="program-notice">Program studi tidak dapat dimuat.</div>';
+    if(state.progressError)return '<div class="program-notice">'+window.esc(state.progressError)+'</div>';
     if(!state.membership)return '<div class="program-notice">Pilih program studi melalui menu profil untuk melihat jadwal, tugas, dan peserta.</div>';
     return '';
   }
@@ -401,7 +419,7 @@
     upcoming=upcoming.slice(0,3);
     var tasks=kindEntries('task').filter(function(entry){return !state.progress[entry.id]})
       .sort(function(a,b){return String(b.data.due||'').localeCompare(String(a.data.due||''))}).slice(0,5);
-    return '<div class="grid"><div class="card"><h2>Jadwal prodi terdekat</h2>'+(upcoming.length?upcoming.map(function(entry){var item=entry.course||{},slot=entry.slot||{};return '<div class="item"><div class="grow"><b>'+window.esc(item.name||'Mata kuliah')+'</b><div class="mu">'+(window.DAYS[+slot.day]||'')+' · '+window.esc(slot.start||'')+'–'+window.esc(slot.end||'')+(slot.room?' · '+window.esc(slot.room):'')+'</div></div></div>'}).join(''):'<div class="empty">Belum ada jadwal prodi.</div>')+'</div><div class="card"><h2>Tugas prodi</h2>'+(tasks.length?tasks.map(function(entry){var item=entry.data||{};return '<div class="item"><div class="grow"><b>'+window.esc(item.title||'Tugas')+'</b><div class="mu">'+window.esc(item.course||'')+'</div></div><span class="mu">'+window.esc(item.due||'')+'</span></div>'}).join(''):'<div class="empty">Belum ada tugas prodi.</div>')+'</div>'+attendance+'</div>';
+    return programNotice()+'<div class="grid"><div class="card"><h2>Jadwal prodi terdekat</h2>'+(upcoming.length?upcoming.map(function(entry){var item=entry.course||{},slot=entry.slot||{};return '<div class="item"><div class="grow"><b>'+window.esc(item.name||'Mata kuliah')+'</b><div class="mu">'+(window.DAYS[+slot.day]||'')+' · '+window.esc(slot.start||'')+'–'+window.esc(slot.end||'')+(slot.room?' · '+window.esc(slot.room):'')+'</div></div></div>'}).join(''):'<div class="empty">Belum ada jadwal prodi.</div>')+'</div><div class="card"><h2>Tugas prodi</h2>'+(tasks.length?tasks.map(function(entry){var item=entry.data||{};return '<div class="item"><div class="grow"><b>'+window.esc(item.title||'Tugas')+'</b><div class="mu">'+window.esc(item.course||'')+'</div></div><span class="mu">'+window.esc(item.due||'')+'</span></div>'}).join(''):'<div class="empty">Belum ada tugas prodi.</div>')+'</div>'+attendance+'</div>';
   }
 
   window.VIEWS.schedule=renderSchedule;
@@ -661,6 +679,8 @@
     state.participants=[];
     state.participantsLoaded=false;
     state.participantsLoading=false;
+    state.progressError='';
+    state.pendingProgramId='';
     attendanceCourseNames={};
     return baseRenderAuth(message);
   };
