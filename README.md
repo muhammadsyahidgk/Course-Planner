@@ -3,11 +3,11 @@
 Aplikasi perkuliahan pribadi untuk mengelola jadwal, absensi, tugas, dan daftar mata kuliah. Data disimpan di akun dan disinkronkan antarperangkat.
 
 ## Fitur
-- **Mata kuliah:** pilih atau cari nama dari daftar yang disediakan, lalu atur dosen, SKS, dan hingga 2 waktu kelas per mata kuliah
-- **Jadwal:** jadwal bersama yang hanya terlihat oleh peserta program studi yang sama
-- **Absensi:** catat kehadiran harian (Hadir, Izin, Sakit, Alpa, Tidak ada), rekap persentase, dan riwayat yang bisa diedit
+- **Mata kuliah dan jadwal:** data bersama yang sama untuk satu prodi; admin mengelola nama mata kuliah, dosen, SKS, dan waktu kelas dari tab Mata Kuliah
+- **Jadwal Prodi:** otomatis mengikuti jadwal pada kartu Mata Kuliah
+- **Absensi:** rekap persentase dan riwayat; tombol di samping rekap membuka formulir untuk mencatat satu mata kuliah hari ini (bawaan Hadir, status bisa diubah)
 - **Tugas:** tugas bersama program studi yang dikelola administrator prodi
-- **Program studi:** jadwal dan tugas bersama khusus peserta program studi, dengan hak edit untuk administrator prodi
+- **Program studi:** data bersama khusus peserta prodi, dengan hak edit untuk administrator prodi
 - **Peserta:** daftar akun yang memilih program studi yang sama
 - **Akun:** masuk dengan alamat surel dan kata sandi, sinkronisasi melalui Supabase
 - **Tampilan:** mode terang, gelap, atau ikut sistem
@@ -22,6 +22,8 @@ Aplikasi perkuliahan pribadi untuk mengelola jadwal, absensi, tugas, dan daftar 
 ## Penyiapan
 1. Buat proyek di [Supabase](https://supabase.com).
 2. Jalankan SQL berikut di Editor SQL:
+
+> Untuk proyek yang sudah dibuat sebelumnya, jalankan seluruh blok SQL ini lagi. Tabel yang ada tidak dihapus; blok ini memperbarui batasan jenis data dan menambahkan tabel status tugas pribadi.
 
 ```sql
 create table if not exists planner_state (
@@ -60,8 +62,22 @@ create table if not exists program_content (
   updated_at timestamptz not null default now()
 );
 
+alter table program_content drop constraint if exists program_content_kind_check;
+alter table program_content add constraint program_content_kind_check
+  check (kind in ('course', 'schedule', 'task'));
+
+create table if not exists program_task_progress (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  program_id text not null references programs(id) on delete cascade,
+  task_id text not null references program_content(id) on delete cascade,
+  completed boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, task_id)
+);
+
 alter table program_members enable row level security;
 alter table program_content enable row level security;
+alter table program_task_progress enable row level security;
 
 create or replace function current_program_id()
 returns text
@@ -91,6 +107,7 @@ revoke all on function is_program_admin(text) from public, anon;
 grant select on programs to authenticated;
 grant select, insert, update on program_members to authenticated;
 grant select, insert, update, delete on program_content to authenticated;
+grant select, insert, update on program_task_progress to authenticated;
 
 drop policy if exists "anggota melihat peserta satu prodi" on program_members;
 create policy "anggota melihat peserta satu prodi" on program_members
@@ -137,6 +154,26 @@ create policy "admin prodi menghapus data" on program_content
   for delete to authenticated
   using (is_program_admin(program_id));
 
+drop policy if exists "peserta mengelola status tugas pribadi" on program_task_progress;
+create policy "peserta mengelola status tugas pribadi" on program_task_progress
+  for all to authenticated
+  using (
+    user_id = auth.uid()
+    and program_id = current_program_id()
+    and exists (
+      select 1 from program_content
+      where id = task_id and program_id = program_task_progress.program_id and kind = 'task'
+    )
+  )
+  with check (
+    user_id = auth.uid()
+    and program_id = current_program_id()
+    and exists (
+      select 1 from program_content
+      where id = task_id and program_id = program_task_progress.program_id and kind = 'task'
+    )
+  );
+
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
@@ -147,6 +184,15 @@ begin
          and tablename = 'program_content'
      ) then
     alter publication supabase_realtime add table public.program_content;
+  end if;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'program_task_progress'
+     ) then
+    alter publication supabase_realtime add table public.program_task_progress;
   end if;
 end $$;
 ```
@@ -164,7 +210,9 @@ set program_id = excluded.program_id,
     role = 'admin';
 ```
 
-Peran admin hanya dapat diubah lewat SQL oleh pengelola Supabase. Untuk prodi berikutnya, tambahkan baris pada tabel `programs` dan pilihan program tersebut di `PROGRAMS` pada `prodi.js`, lalu tetapkan admin untuk program itu. Akun yang memilih prodi dapat melihat jadwal, tugas, dan daftar peserta prodi itu; kebijakan RLS mencegah akses lintas prodi dan membatasi perubahan jadwal/tugas untuk admin.
+Peran admin hanya dapat diubah lewat SQL oleh pengelola Supabase. Untuk prodi berikutnya, tambahkan baris pada tabel `programs` dan pilihan program tersebut di `PROGRAMS` pada `prodi.js`, lalu tetapkan admin untuk program itu. Akun yang memilih prodi dapat melihat mata kuliah, jadwal, tugas, dan daftar peserta prodi itu; kebijakan RLS mencegah akses lintas prodi dan membatasi perubahan mata kuliah/jadwal/tugas untuk admin.
+
+Untuk menyalin mata kuliah dan tugas lama dari data pribadi admin ke prodi, masuk dengan akun admin, buka tab **Mata Kuliah** atau **Tugas Prodi**, lalu pilih **Impor data lama**. Impor menyalin data dari akun admin yang sedang masuk, melewati data yang sudah ada, dan tidak menghapus data pribadi asal. Jadwal prodi lama yang sudah ada akan dipindahkan ke data mata kuliah bersama pada saat admin memuat prodi.
 
 4. Isi `SUPABASE_URL` dan `SUPABASE_ANON_KEY` (kunci publik) di bagian atas `script.js`.
 5. Terbitkan folder ini sebagai situs statis.
@@ -181,5 +229,7 @@ Shell aplikasi dan berkas inti disimpan untuk akses offline setelah kunjungan pe
 
 ## Catatan
 - Sinkronisasi menyimpan seluruh data sebagai satu blok dan memakai versi terbaru. Mengedit di dua perangkat sekaligus dapat menimpa perubahan yang lebih lama.
-- Data mata kuliah dan absensi tetap pribadi per akun. Jadwal dan tugas pada tab masing-masing adalah data bersama prodi; pembaruan jadwal/tugas tersinkron untuk seluruh peserta secara realtime.
-- Absensi diisi otomatis "Hadir" satu kali untuk akun baru (sejak 7 Sep 2026). Ubah melalui tombol ✎ di Riwayat jika ada hari libur.
+- Mata kuliah dan jadwal berasal dari data bersama prodi yang sama. Catatan dan status absensi tetap pribadi per akun.
+- Centang selesai pada tugas disimpan per akun di tabel `program_task_progress`, terpisah dari data pribadi perencana kuliah.
+- Jadwal prodi lama dikonversi menjadi mata kuliah bersama saat admin prodi membuka aplikasi setelah pembaruan skema.
+- Untuk setiap mata kuliah prodi, riwayat absensi pribadi diisi otomatis "Hadir" sejak 7 Sep 2026 sampai hari ini saat pertama kali dibuka; peserta dapat mengubah status tiap catatan melalui tombol ✎. "Catat kehadiran" berada di samping judul rekap dan mencatat satu mata kuliah untuk hari ini.
