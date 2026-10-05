@@ -1,8 +1,9 @@
-var CACHE_NAME='course-planner-v2';
+var CACHE_NAME='course-planner-v3';
 var APP_FILES=[
   'index.html',
   'style.css',
   'script.js',
+  'prodi.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png'

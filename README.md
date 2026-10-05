@@ -4,9 +4,11 @@ Aplikasi perkuliahan pribadi untuk mengelola jadwal, absensi, tugas, dan daftar 
 
 ## Fitur
 - **Mata kuliah:** pilih atau cari nama dari daftar yang disediakan, lalu atur dosen, SKS, dan hingga 2 waktu kelas per mata kuliah
-- **Jadwal:** tampilan jadwal mingguan dari data mata kuliah
+- **Jadwal:** jadwal bersama yang hanya terlihat oleh peserta program studi yang sama
 - **Absensi:** catat kehadiran harian (Hadir, Izin, Sakit, Alpa, Tidak ada), rekap persentase, dan riwayat yang bisa diedit
-- **Tugas:** judul, keterangan, tenggat, dan tanda selesai
+- **Tugas:** tugas bersama program studi yang dikelola administrator prodi
+- **Program studi:** jadwal dan tugas bersama khusus peserta program studi, dengan hak edit untuk administrator prodi
+- **Peserta:** daftar akun yang memilih program studi yang sama
 - **Akun:** masuk dengan alamat surel dan kata sandi, sinkronisasi melalui Supabase
 - **Tampilan:** mode terang, gelap, atau ikut sistem
 
@@ -15,13 +17,14 @@ Aplikasi perkuliahan pribadi untuk mengelola jadwal, absensi, tugas, dan daftar 
 - `style.css`: gaya dasar dan gaya desain baru
 - `index.html.old`, `style.css.old`: salinan halaman dan gaya asli
 - `script.js`: logika aplikasi dan koneksi Supabase
+- `prodi.js`: sinkronisasi jadwal, tugas, peran admin, dan peserta prodi
 
 ## Penyiapan
 1. Buat proyek di [Supabase](https://supabase.com).
 2. Jalankan SQL berikut di Editor SQL:
 
 ```sql
-create table planner_state (
+create table if not exists planner_state (
   user_id uuid primary key references auth.users(id) on delete cascade,
   data jsonb not null default '{}',
   updated_at timestamptz not null default now()
@@ -29,11 +32,140 @@ create table planner_state (
 
 alter table planner_state enable row level security;
 
+drop policy if exists "akses data sendiri" on planner_state;
 create policy "akses data sendiri" on planner_state
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table if not exists programs (
+  id text primary key,
+  name text not null
+);
+
+insert into programs (id, name)
+values ('ti-pagi', 'Teknik Informatika Pagi')
+on conflict (id) do update set name = excluded.name;
+
+create table if not exists program_members (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  program_id text not null references programs(id),
+  display_name text not null,
+  role text not null default 'member' check (role in ('member', 'admin'))
+);
+
+create table if not exists program_content (
+  id text primary key,
+  program_id text not null references programs(id) on delete cascade,
+  kind text not null check (kind in ('schedule', 'task')),
+  data jsonb not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+alter table program_members enable row level security;
+alter table program_content enable row level security;
+
+create or replace function current_program_id()
+returns text
+language sql stable security definer
+set search_path = public
+as $$
+  select program_id from program_members where user_id = auth.uid()
+$$;
+
+create or replace function is_program_admin(target_program_id text)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from program_members
+    where user_id = auth.uid()
+      and program_id = target_program_id
+      and role = 'admin'
+  )
+$$;
+
+grant execute on function current_program_id() to authenticated;
+grant execute on function is_program_admin(text) to authenticated;
+revoke all on function current_program_id() from public, anon;
+revoke all on function is_program_admin(text) from public, anon;
+grant select on programs to authenticated;
+grant select, insert, update on program_members to authenticated;
+grant select, insert, update, delete on program_content to authenticated;
+
+drop policy if exists "anggota melihat peserta satu prodi" on program_members;
+create policy "anggota melihat peserta satu prodi" on program_members
+  for select to authenticated
+  using (user_id = auth.uid() or program_id = current_program_id());
+
+drop policy if exists "pengguna memilih prodi sebagai anggota" on program_members;
+create policy "pengguna memilih prodi sebagai anggota" on program_members
+  for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and role = 'member'
+    and exists (select 1 from programs where id = program_id)
+  );
+
+drop policy if exists "anggota dapat mengganti pilihan prodi" on program_members;
+create policy "anggota dapat mengganti pilihan prodi" on program_members
+  for update to authenticated
+  using (user_id = auth.uid() and role = 'member')
+  with check (
+    user_id = auth.uid()
+    and role = 'member'
+    and exists (select 1 from programs where id = program_id)
+  );
+
+drop policy if exists "anggota prodi melihat jadwal dan tugas" on program_content;
+create policy "anggota prodi melihat jadwal dan tugas" on program_content
+  for select to authenticated
+  using (program_id = current_program_id());
+
+drop policy if exists "admin prodi menambah data" on program_content;
+create policy "admin prodi menambah data" on program_content
+  for insert to authenticated
+  with check (is_program_admin(program_id));
+
+drop policy if exists "admin prodi mengubah data" on program_content;
+create policy "admin prodi mengubah data" on program_content
+  for update to authenticated
+  using (is_program_admin(program_id))
+  with check (is_program_admin(program_id));
+
+drop policy if exists "admin prodi menghapus data" on program_content;
+create policy "admin prodi menghapus data" on program_content
+  for delete to authenticated
+  using (is_program_admin(program_id));
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'program_content'
+     ) then
+    alter publication supabase_realtime add table public.program_content;
+  end if;
+end $$;
 ```
 
-3. Buat akun di **Autentikasi → Pengguna** (aplikasi ini tidak menyediakan halaman pendaftaran).
+3. Buat akun peserta dan admin di **Autentikasi → Pengguna** (aplikasi ini tidak menyediakan halaman pendaftaran). Setelah akun calon admin dibuat, tetapkan admin prodi melalui SQL Editor (ganti alamat surel):
+
+```sql
+insert into program_members (user_id, program_id, display_name, role)
+select id, 'ti-pagi', coalesce(raw_user_meta_data ->> 'full_name', email), 'admin'
+from auth.users
+where email = 'admin@example.com'
+on conflict (user_id) do update
+set program_id = excluded.program_id,
+    display_name = excluded.display_name,
+    role = 'admin';
+```
+
+Peran admin hanya dapat diubah lewat SQL oleh pengelola Supabase. Untuk prodi berikutnya, tambahkan baris pada tabel `programs` dan pilihan program tersebut di `PROGRAMS` pada `prodi.js`, lalu tetapkan admin untuk program itu. Akun yang memilih prodi dapat melihat jadwal, tugas, dan daftar peserta prodi itu; kebijakan RLS mencegah akses lintas prodi dan membatasi perubahan jadwal/tugas untuk admin.
+
 4. Isi `SUPABASE_URL` dan `SUPABASE_ANON_KEY` (kunci publik) di bagian atas `script.js`.
 5. Terbitkan folder ini sebagai situs statis.
 
@@ -49,4 +181,5 @@ Shell aplikasi dan berkas inti disimpan untuk akses offline setelah kunjungan pe
 
 ## Catatan
 - Sinkronisasi menyimpan seluruh data sebagai satu blok dan memakai versi terbaru. Mengedit di dua perangkat sekaligus dapat menimpa perubahan yang lebih lama.
+- Data mata kuliah dan absensi tetap pribadi per akun. Jadwal dan tugas pada tab masing-masing adalah data bersama prodi; pembaruan jadwal/tugas tersinkron untuk seluruh peserta secara realtime.
 - Absensi diisi otomatis "Hadir" satu kali untuk akun baru (sejak 7 Sep 2026). Ubah melalui tombol ✎ di Riwayat jika ada hari libur.
